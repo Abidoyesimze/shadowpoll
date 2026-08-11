@@ -1,0 +1,23 @@
+{
+  "name": "@shadowpoll/api",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "rm -rf dist && tsc --project tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@shadowpoll/contract": "0.1.0",
+    "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
+    "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
+    "@midnight-ntwrk/midnight-js-types": "4.1.1",
+    "rxjs": "^7.8.2",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
