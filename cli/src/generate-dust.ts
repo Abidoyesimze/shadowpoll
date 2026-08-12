@@ -14,11 +14,16 @@
 // limitations under the License.
 
 import { type WalletFacade } from '@midnight-ntwrk/wallet-sdk-facade';
-import { createKeystore, UnshieldedWalletState } from '@midnight-ntwrk/wallet-sdk-unshielded-wallet';
+import { createKeystore } from '@midnight-ntwrk/wallet-sdk-unshielded-wallet';
 import { Logger } from 'pino';
 import { HDWallet, Roles } from '@midnight-ntwrk/wallet-sdk-hd';
 import { getNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import * as rx from 'rxjs';
+
+// Derived from WalletFacade itself rather than imported directly - see the
+// matching comment in wallet-utils.ts.
+type UnwrapObservable<T> = T extends rx.Observable<infer U> ? U : never;
+type UnshieldedWalletState = UnwrapObservable<WalletFacade['unshielded']['state']>;
 
 export const getUnshieldedSeed = (seed: string): Uint8Array<ArrayBufferLike> => {
   const seedBuffer = Buffer.from(seed, 'hex');
@@ -53,16 +58,21 @@ export const generateDust = async (
   const unshieldedKeystore = createKeystore(getUnshieldedSeed(walletSeed), networkId);
   const utxos = unshieldedState.availableCoins.filter((coin) => !coin.meta.registeredForDustGeneration);
 
-  const waitForDustBalance = () =>
-    rx.firstValueFrom(
-      walletFacade.state().pipe(
-        // Same rationale as wallet-utils.ts: fail fast if the live-update
-        // subscription silently dies, instead of hanging indefinitely.
-        rx.timeout({ each: 90_000 }),
-        rx.filter((s) => s.dust.balance(new Date()) > 0n),
-        rx.map((s) => s.dust.balance(new Date())),
-      ),
-    );
+  // Polls with a fresh short-lived subscription each tick rather than
+  // holding wallet.state() subscribed continuously - see the rationale in
+  // wallet-utils.ts's pollWalletState.
+  const waitForDustBalance = async (pollIntervalMs = 3_000, maxWaitMs = 20 * 60_000): Promise<bigint> => {
+    const deadline = Date.now() + maxWaitMs;
+    while (Date.now() < deadline) {
+      const state = await rx.firstValueFrom(walletFacade.state());
+      const balance = state.dust.balance(new Date());
+      if (balance > 0n) {
+        return balance;
+      }
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    }
+    throw new Error(`Timed out after ${maxWaitMs}ms waiting for dust balance to accrue`);
+  };
 
   if (utxos.length === 0) {
     logger.info('NIGHT UTXOs already registered for dust generation.');

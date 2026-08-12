@@ -78,10 +78,15 @@ export const deployDirect = async (network: 'preview' | 'preprod'): Promise<void
   logger.info(`NIGHT balance: ${nightBalance}`);
 
   logger.info('Registering NIGHT UTXOs for DUST generation (needed to pay tx fees)...');
-  const dustTx = await generateDust(logger, seed, unshieldedState, walletProvider.wallet);
-  if (dustTx) {
-    await syncWallet(logger, walletProvider.wallet);
-  }
+  await generateDust(logger, seed, unshieldedState, walletProvider.wallet);
+  // Always wait for a full (shielded + unshielded + dust) sync before
+  // spending - generateDust only waits for a positive DUST *balance*, which
+  // can be true before the DUST lane's merkle-tree/witness state used to
+  // build a valid spend proof has finished syncing, especially for a wallet
+  // address with a long prior transaction history. Building the deploy
+  // transaction against a not-fully-synced dust lane produces a proof the
+  // chain rejects as invalid, even though the balance already looked ready.
+  await syncWallet(logger, walletProvider.wallet);
 
   const zkConfigProvider = new NodeZkConfigProvider<'castVote'>(
     new URL('../../contract/src/managed/shadowpoll', import.meta.url).pathname,

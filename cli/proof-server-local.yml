@@ -1,7 +1,21 @@
 services:
   proof-server:
-    image: midnightntwrk/proof-server:8.0.3
+    # Pinned to match the @midnight-ntwrk/ledger-v8 version the client SDK
+    # resolves to, for the contract circuit proof this server generates.
+    image: midnightntwrk/proof-server:8.1.0
     command: ['midnight-proof-server', '-v']
     container_name: "proof-server-local"
+    # The trusted-setup parameter download can fail transiently on a slow or
+    # flaky link (partial/corrupted fetch -> hash mismatch -> process exits).
+    # Auto-restart so it keeps resuming against the cached volume above.
+    restart: on-failure
     ports:
       - '6300:6300'
+    volumes:
+      # Persists downloaded ZK trusted-setup parameters across restarts -
+      # these are multi-MB one-time downloads that would otherwise be
+      # re-fetched (and re-verified) from scratch on every restart.
+      - proof-server-zk-params:/.cache/midnight/zk-params
+
+volumes:
+  proof-server-zk-params:

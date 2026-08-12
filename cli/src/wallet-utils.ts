@@ -15,8 +15,6 @@
 
 import { UnshieldedTokenType } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import { type FacadeState, type WalletFacade } from '@midnight-ntwrk/wallet-sdk-facade';
-import { type ShieldedWalletAPI, type ShieldedWalletState } from '@midnight-ntwrk/wallet-sdk-shielded';
-import { type UnshieldedWalletAPI, type UnshieldedWalletState } from '@midnight-ntwrk/wallet-sdk-unshielded-wallet';
 import * as Rx from 'rxjs';
 
 import { FaucetClient, type EnvironmentConfiguration } from '@midnight-ntwrk/testkit-js';
@@ -24,17 +22,26 @@ import { Logger } from 'pino';
 import { UnshieldedAddress } from '@midnight-ntwrk/wallet-sdk-address-format';
 import { getNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 
-export const getInitialShieldedState = async (
-  logger: Logger,
-  wallet: ShieldedWalletAPI,
-): Promise<ShieldedWalletState> => {
+// Derived structurally from WalletFacade itself, rather than imported from
+// @midnight-ntwrk/wallet-sdk-shielded / -unshielded-wallet directly - npm's
+// dependency resolution can hoist a different (newer) copy of those packages
+// than the one WalletFacade's own nested dependency actually uses, which
+// makes directly-imported types structurally incompatible with what
+// `wallet.shielded` / `wallet.unshielded` actually return at runtime.
+type UnwrapObservable<T> = T extends Rx.Observable<infer U> ? U : never;
+type FacadeShielded = WalletFacade['shielded'];
+type FacadeUnshielded = WalletFacade['unshielded'];
+type ShieldedWalletState = UnwrapObservable<FacadeShielded['state']>;
+type UnshieldedWalletState = UnwrapObservable<FacadeUnshielded['state']>;
+
+export const getInitialShieldedState = async (logger: Logger, wallet: FacadeShielded): Promise<ShieldedWalletState> => {
   logger.info('Getting initial state of wallet...');
   return Rx.firstValueFrom(wallet.state);
 };
 
 export const getInitialUnshieldedState = async (
   logger: Logger,
-  wallet: UnshieldedWalletAPI,
+  wallet: FacadeUnshielded,
 ): Promise<UnshieldedWalletState> => {
   logger.info('Getting initial state of wallet...');
   return Rx.firstValueFrom(wallet.state);
@@ -58,44 +65,66 @@ const isProgressStrictlyComplete = (progress: unknown): boolean => {
 // (needed to pay fees) is checked separately, directly, in generate-dust.ts.
 const isFacadeStateSynced = (state: FacadeState): boolean => isProgressStrictlyComplete(state.unshielded.progress);
 
-export const syncWallet = (logger: Logger, wallet: WalletFacade, throttleTime = 2_000) => {
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Polls wallet.state() with a fresh, short-lived subscription each tick
+// instead of holding one long-lived subscription open. In practice, staying
+// subscribed to wallet.state() for many minutes while waiting on a slow
+// network causes state objects to pile up somewhere in the wallet SDK's
+// internal pipeline (RxJS operators, or the SDK's own state history) faster
+// than they're released, eventually crashing the process with an OOM. Each
+// poll here is independently garbage-collectable once its tick is done.
+const pollWalletState = async <T>(
+  logger: Logger,
+  poll: () => Promise<T | undefined>,
+  pollIntervalMs: number,
+  maxWaitMs: number,
+  description: string,
+): Promise<T> => {
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    const result = await poll();
+    if (result !== undefined) {
+      return result;
+    }
+    await sleep(pollIntervalMs);
+  }
+  throw new Error(`Timed out after ${maxWaitMs}ms waiting for: ${description}`);
+};
+
+export const syncWallet = async (
+  logger: Logger,
+  wallet: WalletFacade,
+  pollIntervalMs = 3_000,
+  maxWaitMs = 20 * 60_000,
+) => {
   logger.info('Syncing wallet...');
 
-  return Rx.firstValueFrom(
-    wallet.state().pipe(
-      Rx.timeout({ each: 90_000 }),
-      Rx.tap((state: FacadeState) => {
-        const shieldedSynced = isProgressStrictlyComplete(state.shielded.state.progress);
-        const unshieldedSynced = isProgressStrictlyComplete(state.unshielded.progress);
-        const dustSynced = isProgressStrictlyComplete(state.dust.state.progress);
-        logger.debug(
-          `Wallet synced state emission: { shielded=${shieldedSynced}, unshielded=${unshieldedSynced}, dust=${dustSynced} }`,
-        );
-      }),
-      Rx.throttleTime(throttleTime),
-      Rx.tap((state: FacadeState) => {
-        const shieldedSynced = isProgressStrictlyComplete(state.shielded.state.progress);
-        const unshieldedSynced = isProgressStrictlyComplete(state.unshielded.progress);
-        const dustSynced = isProgressStrictlyComplete(state.dust.state.progress);
-        const isSynced = shieldedSynced && dustSynced && unshieldedSynced;
-
-        logger.debug(
-          `Wallet synced state emission (synced=${isSynced}): { shielded=${shieldedSynced}, unshielded=${unshieldedSynced}, dust=${dustSynced} }`,
-        );
-      }),
-      Rx.filter((state: FacadeState) => isFacadeStateSynced(state)),
-      Rx.tap(() => logger.info('Sync complete')),
-      Rx.tap((state: FacadeState) => {
-        const shieldedBalances = state.shielded.balances || {};
-        const unshieldedBalances = state.unshielded.balances || {};
-        const dustBalances = state.dust.balance(new Date(Date.now())) || 0n;
-
-        logger.info(
-          `Wallet balances after sync - Shielded: ${JSON.stringify(shieldedBalances)}, Unshielded: ${JSON.stringify(unshieldedBalances)}, Dust: ${dustBalances}`,
-        );
-      }),
-    ),
+  const state = await pollWalletState(
+    logger,
+    async () => {
+      const state = await Rx.firstValueFrom(wallet.state());
+      const shieldedSynced = isProgressStrictlyComplete(state.shielded.state.progress);
+      const unshieldedSynced = isProgressStrictlyComplete(state.unshielded.progress);
+      const dustSynced = isProgressStrictlyComplete(state.dust.state.progress);
+      logger.debug(
+        `Wallet synced state poll: { shielded=${shieldedSynced}, unshielded=${unshieldedSynced}, dust=${dustSynced} }`,
+      );
+      return shieldedSynced && unshieldedSynced && dustSynced ? state : undefined;
+    },
+    pollIntervalMs,
+    maxWaitMs,
+    'wallet sync (shielded + unshielded + dust)',
   );
+
+  logger.info('Sync complete');
+  const shieldedBalances = state.shielded.balances || {};
+  const unshieldedBalances = state.unshielded.balances || {};
+  const dustBalances = state.dust.balance(new Date(Date.now())) || 0n;
+  logger.info(
+    `Wallet balances after sync - Shielded: ${JSON.stringify(shieldedBalances)}, Unshielded: ${JSON.stringify(unshieldedBalances)}, Dust: ${dustBalances}`,
+  );
+  return state;
 };
 
 export const waitForUnshieldedFunds = async (
@@ -104,10 +133,18 @@ export const waitForUnshieldedFunds = async (
   env: EnvironmentConfiguration,
   tokenType: UnshieldedTokenType,
   fundFromFaucet = false,
-  throttleTime = 2_000,
+  pollIntervalMs = 3_000,
+  maxWaitMs = 20 * 60_000,
 ): Promise<UnshieldedWalletState> => {
   const initialState = await getInitialUnshieldedState(logger, wallet.unshielded);
-  const unshieldedAddress = UnshieldedAddress.codec.encode(getNetworkId(), initialState.address);
+  // initialState.address is nominally the address-format package's nested
+  // copy under wallet-sdk-facade, structurally identical to (but a distinct
+  // TS identity from) the top-level UnshieldedAddress imported below - same
+  // npm-dedup identity split as the WalletFacade-derived types above.
+  const unshieldedAddress = UnshieldedAddress.codec.encode(
+    getNetworkId(),
+    initialState.address as unknown as Parameters<typeof UnshieldedAddress.codec.encode>[1],
+  );
   logger.info(`Using unshielded address: ${unshieldedAddress.toString()} waiting for funds...`);
   if (fundFromFaucet && env.faucet) {
     logger.info('Requesting tokens from faucet...');
@@ -123,36 +160,27 @@ export const waitForUnshieldedFunds = async (
   if (initialBalance === undefined || initialBalance === 0n) {
     logger.info(`Your wallet initial balance is: 0 (not yet initialized)`);
     logger.info(`Waiting to receive tokens...`);
-    return Rx.firstValueFrom(
-      wallet.state().pipe(
-        // The underlying live-update subscription (websocket) can die
-        // silently and stop emitting entirely without erroring. Fail fast
-        // if no state emission arrives for a while, rather than hanging
-        // indefinitely - the caller can then retry with a fresh connection.
-        Rx.timeout({ each: 90_000 }),
-        Rx.tap((state: FacadeState) => {
-          const balance = state.unshielded.balances[tokenType.raw] ?? 0n;
-          logger.debug(
-            `Wallet funds state emission: { synced=${isFacadeStateSynced(state)}, balance=${balance.toString()} }`,
-          );
-        }),
-        Rx.throttleTime(throttleTime),
-        Rx.filter(
-          (state: FacadeState) => isFacadeStateSynced(state) && (state.unshielded.balances[tokenType.raw] ?? 0n) > 0n,
-        ),
-        Rx.tap(() => logger.info('Sync complete')),
-        Rx.tap((state: FacadeState) => {
-          const shieldedBalances = state.shielded.balances || {};
-          const unshieldedBalances = state.unshielded.balances || {};
-          const dustBalances = state.dust.balance(new Date(Date.now())) || 0n;
-
-          logger.info(
-            `Wallet balances after sync - Shielded: ${JSON.stringify(shieldedBalances)}, Unshielded: ${JSON.stringify(unshieldedBalances)}, Dust: ${dustBalances}`,
-          );
-        }),
-        Rx.map((state: FacadeState) => state.unshielded),
-      ),
+    const state = await pollWalletState(
+      logger,
+      async () => {
+        const state = await Rx.firstValueFrom(wallet.state());
+        const balance = state.unshielded.balances[tokenType.raw] ?? 0n;
+        logger.debug(`Wallet funds poll: { synced=${isFacadeStateSynced(state)}, balance=${balance.toString()} }`);
+        return isFacadeStateSynced(state) && balance > 0n ? state : undefined;
+      },
+      pollIntervalMs,
+      maxWaitMs,
+      'unshielded funds to arrive',
     );
+
+    logger.info('Sync complete');
+    const shieldedBalances = state.shielded.balances || {};
+    const unshieldedBalances = state.unshielded.balances || {};
+    const dustBalances = state.dust.balance(new Date(Date.now())) || 0n;
+    logger.info(
+      `Wallet balances after sync - Shielded: ${JSON.stringify(shieldedBalances)}, Unshielded: ${JSON.stringify(unshieldedBalances)}, Dust: ${dustBalances}`,
+    );
+    return state.unshielded;
   }
   return initialState;
 };
