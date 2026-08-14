@@ -30,6 +30,7 @@ This mirrors the general Compact pattern: keep everything in `witness` functions
 contract/   Compact contract, compiled circuits (managed/), and unit tests (vitest)
 api/        Thin TypeScript API wrapping the compiled contract (deploy/join/castVote)
 cli/        Deployment scripts for Preview/Preprod using a local proof server
+frontend/   React/Vite web UI: live poll display + wallet-connected voting
 ```
 
 ## Prerequisites
@@ -96,6 +97,29 @@ Each run logs progress to `logs/<network>-direct/<timestamp>.log`, culminating i
 To re-use a specific wallet instead of generating a fresh one, set `WALLET_SEED` (or `WALLET_MNEMONIC`) in the environment before running the deploy script. Never use a seed that holds real funds — this script logs the seed and persists private state to disk.
 
 > **Note on wallet sync:** `waitForUnshieldedFunds`/`syncWallet` wait for a *full* sync (shielded + unshielded + dust lanes), not just a non-zero balance. A wallet with a long prior transaction history can take several minutes to fully resync its DUST-lane merkle/witness state from a fresh local store; building a deploy transaction before that finishes produces a proof the chain rejects (`1010: Invalid Transaction: Custom error: 170` / `InvalidDustSpendProof`), even though the balance already looks ready.
+
+## Frontend
+
+A React + Vite web UI in [`frontend/`](frontend) for interacting with the deployed contract:
+
+```bash
+# 1. Compile the contract first if you haven't (frontend serves its circuit
+#    artifacts as static files, copied from contract/src/managed)
+npm run compact --workspace=contract
+
+# 2. Start a local proof server (needed to cast a vote, not to view the poll)
+cd cli && docker compose -f proof-server-local.yml up -d && cd ..
+
+# 3. Run the frontend
+npm run dev --workspace=frontend
+```
+
+![ShadowPoll frontend showing the live poll question and real tally read from the Preview indexer](docs/screenshots/frontend.png)
+
+It has two independent halves:
+
+- **Live poll display** — reads the deployed contract's public ledger state directly from the Preview indexer (`frontend/src/hooks/usePollState.ts`), no wallet required. This is what the screenshot above shows: the real question and tally for the contract deployed at the address in the previous section, fetched live.
+- **Wallet-connected voting** — `frontend/src/lib/wallet-bridge.ts` bridges an injected [dapp-connector](https://www.npmjs.com/package/@midnight-ntwrk/dapp-connector-api) wallet (e.g. [Lace](https://www.lace.io/)) to the `WalletProvider`/`MidnightProvider` interfaces `@shadowpoll/api`'s `ShadowPollAPI.castVote()` expects, so the same deploy-time contract-interaction code path is reused for browser voting. **This half needs a real Lace-compatible wallet extension to exercise** — it's implemented and typechecks cleanly against the installed SDK, but casting an actual vote through it hasn't been click-tested end-to-end here (no browser-extension wallet in this dev environment). If you have Lace installed, `npm run dev --workspace=frontend` and clicking "Connect wallet" is the way to try it live.
 
 ## License
 

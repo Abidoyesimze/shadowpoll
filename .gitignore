@@ -12,6 +12,10 @@ logs/
 *.log
 midnight-level-db/
 
+# Frontend: managed/ is copied from contract/src/managed at dev/build time
+# (see frontend/scripts/copy-managed.mjs) - the source of truth lives there.
+frontend/public/managed/
+
 # Test reports
 **/reports
 coverage/

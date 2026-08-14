@@ -9,7 +9,8 @@
   "workspaces": [
     "contract",
     "api",
-    "cli"
+    "cli",
+    "frontend"
   ],
   "dependencies": {
     "@midnight-ntwrk/dapp-connector-api": "4.0.1",
