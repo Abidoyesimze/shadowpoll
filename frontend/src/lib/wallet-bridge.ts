@@ -4,7 +4,7 @@
 // CLI's MidnightWalletProvider (cli/src/midnight-wallet-provider.ts), which
 // instead builds a wallet directly from a seed - here, the wallet's own
 // extension holds the keys and does the signing.
-import type { ConnectedAPI, InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
+import type { ConnectedAPI, InitialAPI, KeyMaterialProvider, ProvingProvider } from '@midnight-ntwrk/dapp-connector-api';
 import type { WalletProvider, MidnightProvider, UnboundTransaction } from '@midnight-ntwrk/midnight-js-types';
 import {
   Transaction,
@@ -71,5 +71,13 @@ export class LaceWalletBridge implements WalletProvider, MidnightProvider {
   async submitTx(tx: FinalizedTransaction): Promise<TransactionId> {
     await this.connected.submitTransaction(toHex(tx.serialize()));
     return tx.transactionHash();
+  }
+
+  // Delegates proving to the wallet itself, rather than requiring a proof
+  // server the visitor has to run locally - this is what lets a publicly
+  // hosted deployment of this frontend actually be usable end to end by
+  // anyone with a compatible wallet installed, no local Docker setup needed.
+  getProvingProvider(keyMaterialProvider: KeyMaterialProvider): Promise<ProvingProvider> {
+    return this.connected.getProvingProvider(keyMaterialProvider);
   }
 }

@@ -18,7 +18,7 @@ export const useWallet = () => {
     setState({ status: 'connecting' });
     try {
       const wallet = await LaceWalletBridge.connect();
-      const providers = buildShadowPollProviders(wallet);
+      const providers = await buildShadowPollProviders(wallet);
       const api = await ShadowPollAPI.join(providers, CONTRACT_ADDRESS);
       apiRef.current = api;
       setState({ status: 'connected', address: wallet.unshieldedAddress, api });
