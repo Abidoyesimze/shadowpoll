@@ -67,52 +67,73 @@ const isFacadeStateSynced = (state: FacadeState): boolean => isProgressStrictlyC
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Polls wallet.state() with a fresh, short-lived subscription each tick
-// instead of holding one long-lived subscription open. In practice, staying
-// subscribed to wallet.state() for many minutes while waiting on a slow
-// network causes state objects to pile up somewhere in the wallet SDK's
-// internal pipeline (RxJS operators, or the SDK's own state history) faster
-// than they're released, eventually crashing the process with an OOM. Each
-// poll here is independently garbage-collectable once its tick is done.
-const pollWalletState = async <T>(
-  logger: Logger,
-  poll: () => Promise<T | undefined>,
-  pollIntervalMs: number,
-  maxWaitMs: number,
-  description: string,
-): Promise<T> => {
-  const deadline = Date.now() + maxWaitMs;
-  while (Date.now() < deadline) {
-    const result = await poll();
-    if (result !== undefined) {
-      return result;
-    }
-    await sleep(pollIntervalMs);
-  }
-  throw new Error(`Timed out after ${maxWaitMs}ms waiting for: ${description}`);
-};
-
-export const syncWallet = async (
+// Stays subscribed to a single wallet.state() stream (rather than polling
+// via repeated short-lived subscriptions) until `extract` returns a defined
+// value. Each *resubscription* to wallet.state() appears to leave behind
+// some amount of un-released internal SDK state (RxJS operators, or the
+// SDK's own state history) - the more often we resubscribe, the faster
+// memory grows, badly enough to OOM the process during a genuinely long
+// initial sync (e.g. a wallet address with no prior history on this
+// network). A single held-open subscription still grows over time, but far
+// more slowly, which is why this avoids polling and instead only
+// resubscribes (via retry) to recover from a real silent stall - a gap of
+// `staleAfterMs` with no emission at all.
+export const waitForFacadeState = async <T>(
   logger: Logger,
   wallet: WalletFacade,
-  pollIntervalMs = 3_000,
-  maxWaitMs = 20 * 60_000,
-) => {
+  extract: (state: FacadeState) => T | undefined,
+  maxWaitMs: number,
+  description: string,
+  staleAfterMs = 90_000,
+  throttleMs = 3_000,
+): Promise<T> => {
+  try {
+    return await Rx.firstValueFrom(
+      wallet.state().pipe(
+        Rx.timeout({ each: staleAfterMs }),
+        // The underlying state stream can tick many times per second (e.g.
+        // DUST balance recomputing against wall-clock time) - throttle how
+        // often we actually process an emission, since each one seems to
+        // retain a non-trivial amount of memory that isn't released until
+        // GC catches up, and unthrottled ticks arrive faster than that.
+        Rx.throttleTime(throttleMs),
+        Rx.map((state) => extract(state)),
+        Rx.filter((result): result is T => result !== undefined),
+        Rx.retry({
+          count: Math.ceil(maxWaitMs / staleAfterMs),
+          delay: (err, retryCount) => {
+            logger.warn(
+              `Wallet state subscription stalled (no update for ${staleAfterMs}ms), retrying (${retryCount}): ${err instanceof Error ? err.message : String(err)}`,
+            );
+            return Rx.timer(2_000);
+          },
+        }),
+        Rx.takeUntil(Rx.timer(maxWaitMs)),
+      ),
+    );
+  } catch (e) {
+    if (e instanceof Rx.EmptyError) {
+      throw new Error(`Timed out after ${maxWaitMs}ms waiting for: ${description}`);
+    }
+    throw e;
+  }
+};
+
+export const syncWallet = async (logger: Logger, wallet: WalletFacade, maxWaitMs = 40 * 60_000) => {
   logger.info('Syncing wallet...');
 
-  const state = await pollWalletState(
+  const state = await waitForFacadeState(
     logger,
-    async () => {
-      const state = await Rx.firstValueFrom(wallet.state());
+    wallet,
+    (state) => {
       const shieldedSynced = isProgressStrictlyComplete(state.shielded.state.progress);
       const unshieldedSynced = isProgressStrictlyComplete(state.unshielded.progress);
       const dustSynced = isProgressStrictlyComplete(state.dust.state.progress);
       logger.debug(
-        `Wallet synced state poll: { shielded=${shieldedSynced}, unshielded=${unshieldedSynced}, dust=${dustSynced} }`,
+        `Wallet synced state emission: { shielded=${shieldedSynced}, unshielded=${unshieldedSynced}, dust=${dustSynced} }`,
       );
       return shieldedSynced && unshieldedSynced && dustSynced ? state : undefined;
     },
-    pollIntervalMs,
     maxWaitMs,
     'wallet sync (shielded + unshielded + dust)',
   );
@@ -133,8 +154,7 @@ export const waitForUnshieldedFunds = async (
   env: EnvironmentConfiguration,
   tokenType: UnshieldedTokenType,
   fundFromFaucet = false,
-  pollIntervalMs = 3_000,
-  maxWaitMs = 20 * 60_000,
+  maxWaitMs = 40 * 60_000,
 ): Promise<UnshieldedWalletState> => {
   const initialState = await getInitialUnshieldedState(logger, wallet.unshielded);
   // initialState.address is nominally the address-format package's nested
@@ -148,27 +168,36 @@ export const waitForUnshieldedFunds = async (
   logger.info(`Using unshielded address: ${unshieldedAddress.toString()} waiting for funds...`);
   if (fundFromFaucet && env.faucet) {
     logger.info('Requesting tokens from faucet...');
-    try {
-      await new FaucetClient(env.faucet, logger).requestTokens(unshieldedAddress.toString());
-    } catch (e) {
-      // Don't let a faucet outage/network blip block us when the wallet
-      // may already be funded - fall through to the balance check below.
-      logger.warn(`Faucet request failed, continuing anyway: ${e instanceof Error ? e.message : String(e)}`);
+    const faucetAttempts = 3;
+    for (let attempt = 1; attempt <= faucetAttempts; attempt++) {
+      try {
+        await new FaucetClient(env.faucet, logger).requestTokens(unshieldedAddress.toString());
+        break;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        if (attempt === faucetAttempts) {
+          // Don't let a faucet outage/network blip block us when the wallet
+          // may already be funded - fall through to the balance check below.
+          logger.warn(`Faucet request failed after ${faucetAttempts} attempts, continuing anyway: ${message}`);
+        } else {
+          logger.warn(`Faucet request failed (attempt ${attempt}/${faucetAttempts}), retrying: ${message}`);
+          await sleep(5_000);
+        }
+      }
     }
   }
   const initialBalance = initialState.balances[tokenType.raw];
   if (initialBalance === undefined || initialBalance === 0n) {
     logger.info(`Your wallet initial balance is: 0 (not yet initialized)`);
     logger.info(`Waiting to receive tokens...`);
-    const state = await pollWalletState(
+    const state = await waitForFacadeState(
       logger,
-      async () => {
-        const state = await Rx.firstValueFrom(wallet.state());
+      wallet,
+      (state) => {
         const balance = state.unshielded.balances[tokenType.raw] ?? 0n;
-        logger.debug(`Wallet funds poll: { synced=${isFacadeStateSynced(state)}, balance=${balance.toString()} }`);
+        logger.debug(`Wallet funds emission: { synced=${isFacadeStateSynced(state)}, balance=${balance.toString()} }`);
         return isFacadeStateSynced(state) && balance > 0n ? state : undefined;
       },
-      pollIntervalMs,
       maxWaitMs,
       'unshielded funds to arrive',
     );

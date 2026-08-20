@@ -13,12 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { type WalletFacade } from '@midnight-ntwrk/wallet-sdk-facade';
+import { type FacadeState, type WalletFacade } from '@midnight-ntwrk/wallet-sdk-facade';
 import { createKeystore } from '@midnight-ntwrk/wallet-sdk-unshielded-wallet';
 import { Logger } from 'pino';
 import { HDWallet, Roles } from '@midnight-ntwrk/wallet-sdk-hd';
 import { getNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import * as rx from 'rxjs';
+import { waitForFacadeState } from './wallet-utils.js';
 
 // Derived from WalletFacade itself rather than imported directly - see the
 // matching comment in wallet-utils.ts.
@@ -58,21 +59,17 @@ export const generateDust = async (
   const unshieldedKeystore = createKeystore(getUnshieldedSeed(walletSeed), networkId);
   const utxos = unshieldedState.availableCoins.filter((coin) => !coin.meta.registeredForDustGeneration);
 
-  // Polls with a fresh short-lived subscription each tick rather than
-  // holding wallet.state() subscribed continuously - see the rationale in
-  // wallet-utils.ts's pollWalletState.
-  const waitForDustBalance = async (pollIntervalMs = 3_000, maxWaitMs = 20 * 60_000): Promise<bigint> => {
-    const deadline = Date.now() + maxWaitMs;
-    while (Date.now() < deadline) {
-      const state = await rx.firstValueFrom(walletFacade.state());
-      const balance = state.dust.balance(new Date());
-      if (balance > 0n) {
-        return balance;
-      }
-      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-    }
-    throw new Error(`Timed out after ${maxWaitMs}ms waiting for dust balance to accrue`);
-  };
+  const waitForDustBalance = (maxWaitMs = 40 * 60_000): Promise<bigint> =>
+    waitForFacadeState(
+      logger,
+      walletFacade,
+      (state: FacadeState) => {
+        const balance = state.dust.balance(new Date());
+        return balance > 0n ? balance : undefined;
+      },
+      maxWaitMs,
+      'dust balance to accrue',
+    );
 
   if (utxos.length === 0) {
     logger.info('NIGHT UTXOs already registered for dust generation.');
