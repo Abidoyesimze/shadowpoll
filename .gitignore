@@ -32,3 +32,5 @@ coverage/
 
 # Output of 'npm pack'
 *.tgz
+.vercel
+.env*

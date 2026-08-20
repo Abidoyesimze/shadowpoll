@@ -1,6 +1,10 @@
 # ShadowPoll
 
-A private voting/polling contract for [Midnight](https://midnight.network), built for the **Moonlight Challenges — Level 1: New Moon**.
+A private voting/polling contract for [Midnight](https://midnight.network), built for the **Moonlight Challenges** — [Level 1: New Moon](#level-1--new-moon) and [Level 2: First Crescent](#level-2--first-crescent).
+
+**Live demo:** [shadowpoll-xi.vercel.app](https://shadowpoll-xi.vercel.app)
+**Contract (Preview):** [`e5facde142e36093a5430224340c8ebf7675ed90fdfdeb6be7183f895458d34d`](https://indexer.preview.midnight.network/api/v4/graphql) — see [Level 2](#level-2--first-crescent) for why Preview, not Preprod
+**Demo video:** _pending_
 
 ## Product idea
 
@@ -24,19 +28,23 @@ Concretely, in [`contract/src/shadowpoll.compact`](contract/src/shadowpoll.compa
 
 This mirrors the general Compact pattern: keep everything in `witness` functions by default, and reach for `disclose()` only at the exact point where a value is deliberately meant to become public — never by accident.
 
+### The privacy claim, observable
+
+Level 2 asks for "something proven without being shown." Here it is: **connect a wallet, cast one vote, then try to vote again from that same wallet.** The second attempt is rejected — the contract proves you already voted — but at no point does the UI, the transaction, or the public ledger state ever reveal *what* you voted or *which* on-chain identity you are. The only thing that changes publicly is one of two aggregate counters. Anyone watching the indexer sees a tally move and a nullifier hash appear in a set; no one, including whoever's running the poll, can work backwards from that to a person or a choice. See [`docs/demo-script.md`](docs/demo-script.md) for the exact walkthrough.
+
 ## Repo layout
 
 ```
 contract/   Compact contract, compiled circuits (managed/), and unit tests (vitest)
 api/        Thin TypeScript API wrapping the compiled contract (deploy/join/castVote)
 cli/        Deployment scripts for Preview/Preprod using a local proof server
-frontend/   React/Vite web UI: live poll display + wallet-connected voting
+frontend/   React/Vite web UI: live poll display + Lace-connected voting
 ```
 
 ## Prerequisites
 
 - [Node.js 22+](https://nodejs.org) (see `.nvmrc`)
-- [Docker](https://www.docker.com/) (for the local proof server)
+- [Docker](https://www.docker.com/) (for the local proof server, only needed for CLI deploys)
 - The [Compact compiler](https://docs.midnight.network/develop/tutorial/building/) (`compact` CLI), installed via:
   ```bash
   curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
@@ -46,7 +54,7 @@ frontend/   React/Vite web UI: live poll display + wallet-connected voting
 ## Setup — run locally
 
 ```bash
-# 1. Install dependencies (installs the contract, api, and cli workspaces)
+# 1. Install dependencies (installs every workspace: contract, api, cli, frontend)
 npm install
 
 # 2. Compile the Compact contract into circuits + keys (managed/)
@@ -59,6 +67,12 @@ npm run test --workspace=contract
 npm run build --workspace=contract
 npm run build --workspace=api
 ```
+
+---
+
+## Level 1 — New Moon
+
+Toolchain set up, first Compact contract written and deployed to Preview.
 
 ### Compile output
 
@@ -74,7 +88,7 @@ contract/src/managed/shadowpoll/
 
 ![Successful compile output listing the compiled circuit](docs/screenshots/compile.png)
 
-## Deploying to Preview / Preprod
+### Deploying to Preview / Preprod
 
 Deployment uses a local proof server (rather than the ephemeral docker-managed one) for reliability:
 
@@ -96,30 +110,52 @@ Each run logs progress to `logs/<network>-direct/<timestamp>.log`, culminating i
 
 To re-use a specific wallet instead of generating a fresh one, set `WALLET_SEED` (or `WALLET_MNEMONIC`) in the environment before running the deploy script. Never use a seed that holds real funds — this script logs the seed and persists private state to disk.
 
-> **Note on wallet sync:** `waitForUnshieldedFunds`/`syncWallet` wait for a *full* sync (shielded + unshielded + dust lanes), not just a non-zero balance. A wallet with a long prior transaction history can take several minutes to fully resync its DUST-lane merkle/witness state from a fresh local store; building a deploy transaction before that finishes produces a proof the chain rejects (`1010: Invalid Transaction: Custom error: 170` / `InvalidDustSpendProof`), even though the balance already looks ready.
+> **Note on wallet sync:** `waitForUnshieldedFunds`/`syncWallet` wait for a *full* sync (shielded + unshielded + dust lanes), not just a non-zero balance. A wallet with a long prior transaction history can take several minutes to fully resync its DUST-lane merkle/witness state from a fresh local store; building a deploy transaction before that finishes produces a proof the chain rejects (`1010: Invalid Transaction: Custom error: 170` / `InvalidDustSpendProof`), even though the balance already looks ready. A wallet address with *no* prior history on a given network needs a genuinely long first-time sync (many minutes, multiple GB of memory) - see `cli/src/wallet-utils.ts` for how that's made resilient to transient stalls.
 
-## Frontend
+---
 
-A React + Vite web UI in [`frontend/`](frontend) for interacting with the deployed contract:
+## Level 2 — First Crescent
+
+Contract wired to a frontend UI, with Lace connected.
+
+### Running the frontend
 
 ```bash
 # 1. Compile the contract first if you haven't (frontend serves its circuit
 #    artifacts as static files, copied from contract/src/managed)
 npm run compact --workspace=contract
 
-# 2. Start a local proof server (needed to cast a vote, not to view the poll)
-cd cli && docker compose -f proof-server-local.yml up -d && cd ..
-
-# 3. Run the frontend
+# 2. Run the frontend
 npm run dev --workspace=frontend
 ```
 
-![ShadowPoll frontend showing the live poll question and real tally read from the Preview indexer](docs/screenshots/frontend.png)
+![ShadowPoll live demo on Vercel, showing the live poll question and real tally](docs/screenshots/live-demo.png)
 
-It has two independent halves:
+Live at **[shadowpoll-xi.vercel.app](https://shadowpoll-xi.vercel.app)**. It has two independent halves:
 
-- **Live poll display** — reads the deployed contract's public ledger state directly from the Preview indexer (`frontend/src/hooks/usePollState.ts`), no wallet required. This is what the screenshot above shows: the real question and tally for the contract deployed at the address in the previous section, fetched live.
-- **Wallet-connected voting** — `frontend/src/lib/wallet-bridge.ts` bridges an injected [dapp-connector](https://www.npmjs.com/package/@midnight-ntwrk/dapp-connector-api) wallet (e.g. [Lace](https://www.lace.io/)) to the `WalletProvider`/`MidnightProvider` interfaces `@shadowpoll/api`'s `ShadowPollAPI.castVote()` expects, so the same deploy-time contract-interaction code path is reused for browser voting. **This half needs a real Lace-compatible wallet extension to exercise** — it's implemented and typechecks cleanly against the installed SDK, but casting an actual vote through it hasn't been click-tested end-to-end here (no browser-extension wallet in this dev environment). If you have Lace installed, `npm run dev --workspace=frontend` and clicking "Connect wallet" is the way to try it live.
+- **Live poll display** (`frontend/src/hooks/usePollState.ts`) — reads the deployed contract's public ledger state directly from the indexer, no wallet required.
+- **Lace-connected voting** — `frontend/src/lib/wallet-bridge.ts` bridges the injected [dapp-connector](https://www.npmjs.com/package/@midnight-ntwrk/dapp-connector-api) API (e.g. [Lace](https://www.lace.io/)) to the `WalletProvider`/`MidnightProvider` interfaces `@shadowpoll/api`'s `ShadowPollAPI.castVote()` expects - connect, get funds-aware state, call the `castVote` circuit, submit through the wallet, disconnect. Proving is delegated to the wallet itself by default (`getProvingProvider`, see `frontend/src/lib/providers.ts`), not a locally-run proof server, so this works for any visitor with a compatible wallet installed and no Docker setup. Set `VITE_USE_LOCAL_PROOF_SERVER=true` to instead prove against a proof server you run yourself.
+
+### Why Preview, not Preprod
+
+Level 2 asks for Preprod specifically, and the frontend/CLI both support it (`VITE_NETWORK=preprod`, `npm run preprod-direct`) - but as of this writing, Preprod's faucet won't fund a deploying wallet, which blocks a fresh deploy there. This isn't a sync-time or memory issue (both of which came up and were fixed along the way, see `cli/src/wallet-utils.ts`) - it's that the SDK's faucet client (`@midnight-ntwrk/testkit-js`'s `FaucetClient`) posts to the wrong endpoint with an outdated request shape. The real Preprod faucet frontend calls `POST https://midnight-tmnight-preprod.nethermind.dev/api/request-tokens` with a `{address, captchaToken}` body gated by Cloudflare Turnstile; the SDK instead posts `{recipientAddress, amount}` straight to the faucet's root URL, which Express's SPA fallback answers with a misleading `200 OK` HTML page - so the deploy script logs "Faucet response: OK" and then waits forever, since no tokens were ever actually requested. Confirmed by replaying the real request manually:
+
+```
+$ curl -X POST https://midnight-tmnight-preprod.nethermind.dev/api/request-tokens \
+    -H "Content-Type: application/json" \
+    -d '{"address":"mn_addr_preprod1...","captchaToken":"x"}'
+{"status":"error","message":"Captcha verification failed: invalid-input-response"}
+```
+
+A real captcha token only comes from a human completing the challenge in a browser, so this contract is deployed to **Preview** instead - the same address from [Level 1](#deploying-to-preview--preprod) - with the frontend's Lace integration, circuit call, and privacy behavior otherwise identical to what Level 2 asks for on Preprod. Swapping networks once the faucet is fixed is a one-line env var change.
+
+### Privacy claim
+
+See [The privacy claim, observable](#the-privacy-claim-observable) above, and [`docs/demo-script.md`](docs/demo-script.md) for the exact steps the demo video walks through: connect → cast a vote (circuit call) → attempt a second vote from the same wallet (rejected, without revealing why to any observer) → disconnect.
+
+### Demo video
+
+_pending_ - recorded by following [`docs/demo-script.md`](docs/demo-script.md) against the live deploy above, since this dev environment has no browser-extension support to record it directly.
 
 ## License
 
