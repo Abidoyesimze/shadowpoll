@@ -23,4 +23,7 @@ export const INDEXER_WS_URL = `wss://indexer.${NETWORK}.midnight.network/api/v4/
 export const USE_LOCAL_PROOF_SERVER = import.meta.env.VITE_USE_LOCAL_PROOF_SERVER === 'true';
 export const PROOF_SERVER_URL = import.meta.env.VITE_PROOF_SERVER_URL ?? 'http://localhost:6300';
 
-export const ZK_CONFIG_BASE_URL = `${import.meta.env.BASE_URL}managed/shadowpoll`;
+// FetchZkConfigProvider requires an absolute URL (it does `new URL(baseURL)`
+// with no base, which throws on a plain path like "/managed/shadowpoll") -
+// resolve against the current origin to make it one.
+export const ZK_CONFIG_BASE_URL = new URL(`${import.meta.env.BASE_URL}managed/shadowpoll`, window.location.origin).toString();
