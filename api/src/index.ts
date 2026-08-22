@@ -169,6 +169,12 @@ export class ShadowPollAPI implements DeployedShadowPollAPI {
       },
     });
 
+    // getPrivateState() below reads from privateStateProvider, which requires
+    // the provider to already be scoped to a contract address - normally set
+    // by the ShadowPollAPI constructor, but that only runs after this whole
+    // method returns. Set it explicitly first so the read doesn't throw.
+    providers.privateStateProvider.setContractAddress(contractAddress);
+
     const deployedShadowPollContract = await findDeployedContract<ShadowPollContract>(providers, {
       contractAddress,
       compiledContract: CompiledShadowPollContractContract,
