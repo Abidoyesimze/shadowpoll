@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
 import { usePollState } from './hooks/usePollState';
 import { useWallet } from './hooks/useWallet';
+import { Hero } from './components/Hero';
+import { HowItWorks } from './components/HowItWorks';
+import { PrivacyModel } from './components/PrivacyModel';
 import { PollCard } from './components/PollCard';
 import { ConnectButton } from './components/ConnectButton';
 import { VoteButtons } from './components/VoteButtons';
-import { CONTRACT_ADDRESS, NETWORK } from './lib/env';
+import { Footer } from './components/Footer';
+
+const scrollToPoll = () => document.getElementById('live-poll')?.scrollIntoView({ behavior: 'smooth' });
 
 export const App = () => {
   const pollStatus = usePollState();
@@ -21,31 +26,45 @@ export const App = () => {
   }, [walletState]);
 
   return (
-    <main className="app">
-      <header>
-        <h1>ShadowPoll</h1>
-        <p className="subtitle">Private voting on Midnight - public tallies, private ballots.</p>
-        <ConnectButton state={walletState} onConnect={connect} onDisconnect={disconnect} />
-      </header>
+    <>
+      <nav className="topnav">
+        <span className="wordmark">ShadowPoll</span>
+        <button className="btn-ghost topnav-live" onClick={scrollToPoll}>
+          Try it live
+        </button>
+      </nav>
 
-      {pollStatus.status === 'loading' && <p>Loading poll from the {NETWORK} indexer…</p>}
-      {pollStatus.status === 'error' && <p className="error">Failed to load poll: {pollStatus.message}</p>}
-      {pollStatus.status === 'ready' && (
-        <>
-          <PollCard poll={pollStatus.poll} />
-          {walletState.status === 'connected' ? (
-            <VoteButtons api={walletState.api} hasVoted={hasVoted} />
-          ) : (
-            <p className="hint">Connect a Midnight wallet (e.g. Lace) to cast a vote.</p>
-          )}
-        </>
-      )}
+      <main>
+        <Hero onTryItLive={scrollToPoll} />
+        <HowItWorks />
+        <PrivacyModel />
 
-      <footer>
-        <span>
-          Contract: <code>{CONTRACT_ADDRESS}</code> on {NETWORK}
-        </span>
-      </footer>
-    </main>
+        <section id="live-poll" className="section section-live">
+          <h2>Try it live</h2>
+          <p className="section-lead">This is a real, deployed contract - not a mockup. Connect a wallet and cast an actual vote.</p>
+
+          <div className="live-poll-widget">
+            <div className="live-poll-wallet">
+              <ConnectButton state={walletState} onConnect={connect} onDisconnect={disconnect} />
+            </div>
+
+            {pollStatus.status === 'loading' && <p className="hint">Loading poll from the indexer…</p>}
+            {pollStatus.status === 'error' && <p className="error">Failed to load poll: {pollStatus.message}</p>}
+            {pollStatus.status === 'ready' && (
+              <>
+                <PollCard poll={pollStatus.poll} />
+                {walletState.status === 'connected' ? (
+                  <VoteButtons api={walletState.api} hasVoted={hasVoted} />
+                ) : (
+                  <p className="hint">Connect a Midnight wallet (e.g. Lace) above to cast a vote.</p>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </>
   );
 };

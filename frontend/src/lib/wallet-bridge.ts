@@ -50,6 +50,12 @@ export class LaceWalletBridge implements WalletProvider, MidnightProvider {
     return candidates.find((api) => api.rdns.includes('lace')) ?? candidates[0];
   }
 
+  // Lets the UI tell "no wallet installed" apart from other connection
+  // failures up front, instead of only finding out after a failed click.
+  static isWalletAvailable(): boolean {
+    return Object.keys(window.midnight ?? {}).length > 0;
+  }
+
   getCoinPublicKey(): string {
     return this.coinPublicKey;
   }

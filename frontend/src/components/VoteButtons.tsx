@@ -18,15 +18,20 @@ export const VoteButtons = ({ api, hasVoted }: { api: ShadowPollAPI; hasVoted: b
   };
 
   if (hasVoted) {
-    return <p className="voted">You've already voted in this poll - only one vote per identity is allowed.</p>;
+    return (
+      <p className="voted">
+        <span aria-hidden="true">✓</span> You've already voted in this poll - one vote per identity, enforced by the
+        contract.
+      </p>
+    );
   }
 
   return (
     <div className="vote-buttons">
-      <button disabled={pending !== null} onClick={() => vote(true)}>
+      <button className="btn-vote btn-vote-yes" disabled={pending !== null} onClick={() => vote(true)}>
         {pending === 'yes' ? 'Casting…' : 'Vote Yes'}
       </button>
-      <button disabled={pending !== null} onClick={() => vote(false)}>
+      <button className="btn-vote btn-vote-no" disabled={pending !== null} onClick={() => vote(false)}>
         {pending === 'no' ? 'Casting…' : 'Vote No'}
       </button>
       {error && <p className="error">{error}</p>}
