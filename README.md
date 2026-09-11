@@ -136,6 +136,20 @@ Live at **[shadowpoll-xi.vercel.app](https://shadowpoll-xi.vercel.app)**. It has
 - **Live poll display** (`frontend/src/hooks/usePollState.ts`) — reads the deployed contract's public ledger state directly from the indexer, no wallet required.
 - **Lace-connected voting** — `frontend/src/lib/wallet-bridge.ts` bridges the injected [dapp-connector](https://www.npmjs.com/package/@midnight-ntwrk/dapp-connector-api) API (e.g. [Lace](https://www.lace.io/)) to the `WalletProvider`/`MidnightProvider` interfaces `@shadowpoll/api`'s `ShadowPollAPI.castVote()` expects - connect, get funds-aware state, call the `castVote` circuit, submit through the wallet, disconnect. Proving is delegated to the wallet itself by default (`getProvingProvider`, see `frontend/src/lib/providers.ts`), not a locally-run proof server, so this works for any visitor with a compatible wallet installed and no Docker setup. Set `VITE_USE_LOCAL_PROOF_SERVER=true` to instead prove against a proof server you run yourself.
 
+### Deploying the frontend
+
+This is an npm-workspaces monorepo, and `frontend/` depends on the sibling `contract/` and `api/` workspaces being built first - Vercel's (or Netlify's) framework auto-detection doesn't know that, and will also misread the top-level `api/` folder as serverless functions if left on defaults. Configure these explicitly rather than relying on auto-detect:
+
+| Setting | Value |
+|---|---|
+| Root Directory | `frontend` |
+| Framework Preset | Vite |
+| Install Command | `echo skip-default-install` (a no-op - the build command below does its own install) |
+| Build Command | `cd .. && npm install && npm run build --workspace=contract && npm run build --workspace=api && cd frontend && npm run build` |
+| Output Directory | `dist` |
+
+No environment variables are required - `frontend/src/lib/env.ts`'s defaults already point at the deployed contract below. See that file if you want to override the network or contract address instead.
+
 ### Why Preview, not Preprod
 
 Level 2 asks for Preprod specifically, and the frontend/CLI both support it (`VITE_NETWORK=preprod`, `npm run preprod-direct`) - but as of this writing, Preprod's faucet won't fund a deploying wallet, which blocks a fresh deploy there. This isn't a sync-time or memory issue (both of which came up and were fixed along the way, see `cli/src/wallet-utils.ts`) - it's that the SDK's faucet client (`@midnight-ntwrk/testkit-js`'s `FaucetClient`) posts to the wrong endpoint with an outdated request shape. The real Preprod faucet frontend calls `POST https://midnight-tmnight-preprod.nethermind.dev/api/request-tokens` with a `{address, captchaToken}` body gated by Cloudflare Turnstile; the SDK instead posts `{recipientAddress, amount}` straight to the faucet's root URL, which Express's SPA fallback answers with a misleading `200 OK` HTML page - so the deploy script logs "Faucet response: OK" and then waits forever, since no tokens were ever actually requested. Confirmed by replaying the real request manually:
