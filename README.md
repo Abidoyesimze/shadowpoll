@@ -1,10 +1,14 @@
 # ShadowPoll
 
-A private voting/polling contract for [Midnight](https://midnight.network), built for the **Moonlight Challenges** — [Level 1: New Moon](#level-1--new-moon) and [Level 2: First Crescent](#level-2--first-crescent).
+[![CI](https://github.com/Abidoyesimze/shadowpoll/actions/workflows/ci.yml/badge.svg)](https://github.com/Abidoyesimze/shadowpoll/actions/workflows/ci.yml)
+
+A private voting/polling contract for [Midnight](https://midnight.network), built for the **Moonlight Challenges** — [Level 1: New Moon](#level-1--new-moon), [Level 2: First Crescent](#level-2--first-crescent), and [Level 3: Half Moon](#level-3--half-moon).
 
 **Live demo:** [shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)
 **Contract (Preview):** [`e5facde142e36093a5430224340c8ebf7675ed90fdfdeb6be7183f895458d34d`](https://indexer.preview.midnight.network/api/v4/graphql) — see [Level 2](#level-2--first-crescent) for why Preview, not Preprod
-**Demo video:** [Watch on Loom](https://www.loom.com/share/0acbb755c90d44e886c8d400ccb9c9e4)
+**Demo video (Level 2):** [Watch on Loom](https://www.loom.com/share/0acbb755c90d44e886c8d400ccb9c9e4)
+**Demo video (Level 3):** _pending_
+**Chosen idea:** Private Voting — anonymous ballots with publicly verifiable tallies (see [Level 3](#level-3--half-moon))
 
 ## Product idea
 
@@ -170,6 +174,63 @@ See [The privacy claim, observable](#the-privacy-claim-observable) above, and [`
 ### Demo video
 
 **[Watch on Loom](https://www.loom.com/share/0acbb755c90d44e886c8d400ccb9c9e4)** - recorded by following [`docs/demo-script.md`](docs/demo-script.md) against the live deploy above: connect Lace, cast a vote (the `castVote` circuit call), and the observable privacy behavior.
+
+## Level 3 — Half Moon
+
+A polished, production-grade dApp: tests, CI/CD, and a chosen problem from the Moonlight Challenges idea list.
+
+### Chosen idea: Private Voting
+
+ShadowPoll already *is* "Private Voting — anonymous ballots with publicly verifiable tallies," the first idea on the provided list - Levels 1 and 2 built exactly this, so Level 3 is about hardening it (tests, CI, honest documentation of what's real vs. in-progress) rather than starting a new project. See [Product idea](#product-idea) above for the full pitch, and [`docs/product-proposal.md`](docs/product-proposal.md) for the standalone proposal write-up.
+
+### Tests
+
+```bash
+npm run test --workspace=contract
+```
+
+6 tests in [`contract/src/test/shadowpoll.test.ts`](contract/src/test/shadowpoll.test.ts), each checking a specific privacy or correctness property rather than just exercising code paths:
+
+- initializes public ledger state deterministically
+- casting a yes vote updates only the public tally
+- casting a no vote updates only the public tally
+- accumulates the tally correctly across multiple distinct voters
+- rejects a second vote from the same private identity
+- does not reveal a voter identity across independent votes with the same choice
+
+![6 tests passing](docs/screenshots/tests-passing.png)
+
+### CI/CD
+
+[`​.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push/PR to `main`: installs the workspace, builds `contract` and `api`, runs the contract test suite, typechecks `cli` and `frontend`, and does a full production build of the frontend - so a broken build or a failing test is caught before merge, not discovered after deploy. Badge at the top of this README links to the latest run.
+
+The Compact compiler itself isn't installed in the CI runner (it's a standalone toolchain, not an npm package) - the compiled circuit artifacts under `contract/src/managed/` are committed to git precisely so CI (and anyone cloning the repo) doesn't need it just to build and test the TypeScript layers. Recompiling from `.compact` source still requires the toolchain locally, per [Prerequisites](#prerequisites).
+
+### Privacy model: what an observer can and cannot learn
+
+Anyone with access to the Preview indexer or a block explorer - not just other players, literally anyone, with no special access - can query this contract. Here's exactly what that gets them:
+
+**An observer *can* learn:**
+- The poll's question text (public from deployment).
+- The current Yes/No tally at any point in time.
+- That *some* identity cast *a* vote, each time the `voted` nullifier set gains a new entry.
+- The total number of votes cast (size of the `voted` set) vs. the sum of yesVotes + noVotes (these always match, which is itself a publicly verifiable integrity property - the tally can't be tampered with independently of real votes).
+
+**An observer *cannot* learn:**
+- Which wallet/identity cast any specific vote - the nullifier (`persistentHash(secretId)`) is one-way; there's no computation that recovers `secretId` from it.
+- How any specific identity voted - `myChoice` is a private witness that only ever contributes to the two aggregate counters, never disclosed alongside anything identifying.
+- Whether two different nullifiers belong to related or unrelated people - nullifiers reveal nothing about the wallets/identities that produced them.
+- Even the poll's own deployer/creator gets none of the above beyond what the public ledger already shows everyone else - there's no privileged read path.
+
+The one deliberate exception is unavoidable and stated plainly: the *aggregate* tally is intentionally public, because a poll whose result nobody can see isn't a poll. Privacy here means *ballot* privacy, not *result* privacy.
+
+### Current limitations, stated plainly
+
+In the interest of "production-grade" meaning honest, not just polished:
+
+- **Voting through the live frontend with Lace is not yet confirmed reliably working end to end.** Wallet connect and the read-only live poll display are verified working; casting a vote via wallet-delegated proving has hit a silent failure (no error, no wallet approval prompt) during testing that isn't fully root-caused yet - see the open investigation in this repo's commit history around `wallet-bridge.ts` and `providers.ts`. The `castVote` circuit itself is verified correct and tested at the contract level (see Tests above), and casting a vote via the CLI's direct-deploy path (server-side wallet, not Lace) works reliably.
+- **Preprod is still blocked** by the faucet issue documented in [Level 2](#why-preview-not-preprod) - this contract runs on Preview.
+- **DUST generation timing on Preview is inconsistent** in practice - Midnight's docs describe ~5 minutes on local networks, but real-world waits during testing sometimes ran well past that.
 
 ## License
 
