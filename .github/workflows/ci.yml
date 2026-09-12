@@ -1,0 +1,42 @@
+name: CI
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      # The Compact compiler isn't available in this runner - the compiled
+      # circuit artifacts (contract/src/managed/) are committed to git, so
+      # building/testing here doesn't need to (and can't) re-run `compact
+      # compile`. See README's "Compile output" section for that step.
+      - name: Build contract package
+        run: npm run build --workspace=contract
+
+      - name: Build api package
+        run: npm run build --workspace=api
+
+      - name: Run contract test suite
+        run: npm run test --workspace=contract
+
+      - name: Typecheck cli
+        run: npm run typecheck --workspace=cli
+
+      - name: Typecheck frontend
+        run: npm run typecheck --workspace=frontend
+
+      - name: Build frontend
+        run: npm run build --workspace=frontend
