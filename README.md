@@ -2,9 +2,9 @@
 
 A private voting/polling contract for [Midnight](https://midnight.network), built for the **Moonlight Challenges** — [Level 1: New Moon](#level-1--new-moon) and [Level 2: First Crescent](#level-2--first-crescent).
 
-**Live demo:** [shadowpoll-xi.vercel.app](https://shadowpoll-xi.vercel.app)
+**Live demo:** [shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)
 **Contract (Preview):** [`e5facde142e36093a5430224340c8ebf7675ed90fdfdeb6be7183f895458d34d`](https://indexer.preview.midnight.network/api/v4/graphql) — see [Level 2](#level-2--first-crescent) for why Preview, not Preprod
-**Demo video:** _pending_
+**Demo video:** [Watch on Loom](https://www.loom.com/share/18e5ca9e383f4834b7000f59e5529621)
 
 ## Product idea
 
@@ -131,7 +131,7 @@ npm run dev --workspace=frontend
 
 ![ShadowPoll live demo on Vercel, showing the live poll question and real tally](docs/screenshots/live-demo.png)
 
-Live at **[shadowpoll-xi.vercel.app](https://shadowpoll-xi.vercel.app)**. It has two independent halves:
+Live at **[shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)**. It has two independent halves:
 
 - **Live poll display** (`frontend/src/hooks/usePollState.ts`) — reads the deployed contract's public ledger state directly from the indexer, no wallet required.
 - **Lace-connected voting** — `frontend/src/lib/wallet-bridge.ts` bridges the injected [dapp-connector](https://www.npmjs.com/package/@midnight-ntwrk/dapp-connector-api) API (e.g. [Lace](https://www.lace.io/)) to the `WalletProvider`/`MidnightProvider` interfaces `@shadowpoll/api`'s `ShadowPollAPI.castVote()` expects - connect, get funds-aware state, call the `castVote` circuit, submit through the wallet, disconnect. Proving is delegated to the wallet itself by default (`getProvingProvider`, see `frontend/src/lib/providers.ts`), not a locally-run proof server, so this works for any visitor with a compatible wallet installed and no Docker setup. Set `VITE_USE_LOCAL_PROOF_SERVER=true` to instead prove against a proof server you run yourself.
@@ -169,7 +169,7 @@ See [The privacy claim, observable](#the-privacy-claim-observable) above, and [`
 
 ### Demo video
 
-_pending_ - recorded by following [`docs/demo-script.md`](docs/demo-script.md) against the live deploy above, since this dev environment has no browser-extension support to record it directly.
+**[Watch on Loom](https://www.loom.com/share/18e5ca9e383f4834b7000f59e5529621)** - recorded by following [`docs/demo-script.md`](docs/demo-script.md) against the live deploy above: connect Lace, cast a vote (the `castVote` circuit call), and the observable privacy behavior.
 
 ## License
 
