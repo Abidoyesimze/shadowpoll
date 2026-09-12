@@ -4,7 +4,7 @@ A private voting/polling contract for [Midnight](https://midnight.network), buil
 
 **Live demo:** [shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)
 **Contract (Preview):** [`e5facde142e36093a5430224340c8ebf7675ed90fdfdeb6be7183f895458d34d`](https://indexer.preview.midnight.network/api/v4/graphql) — see [Level 2](#level-2--first-crescent) for why Preview, not Preprod
-**Demo video:** [Watch on Loom](https://www.loom.com/share/18e5ca9e383f4834b7000f59e5529621)
+**Demo video:** [Watch on Loom](https://www.loom.com/share/0acbb755c90d44e886c8d400ccb9c9e4)
 
 ## Product idea
 
@@ -169,7 +169,7 @@ See [The privacy claim, observable](#the-privacy-claim-observable) above, and [`
 
 ### Demo video
 
-**[Watch on Loom](https://www.loom.com/share/18e5ca9e383f4834b7000f59e5529621)** - recorded by following [`docs/demo-script.md`](docs/demo-script.md) against the live deploy above: connect Lace, cast a vote (the `castVote` circuit call), and the observable privacy behavior.
+**[Watch on Loom](https://www.loom.com/share/0acbb755c90d44e886c8d400ccb9c9e4)** - recorded by following [`docs/demo-script.md`](docs/demo-script.md) against the live deploy above: connect Lace, cast a vote (the `castVote` circuit call), and the observable privacy behavior.
 
 ## License
 
