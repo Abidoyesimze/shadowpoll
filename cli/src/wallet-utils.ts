@@ -119,18 +119,17 @@ export const waitForFacadeState = async <T>(
   }
 };
 
-// Waiting on *shielded*-lane sync specifically has become impractically slow
-// on Preview (hours, not minutes) - shielded scanning has to trial-check
-// every shielded output ever emitted on the whole chain (not just this
-// wallet's own history), so its cost grows with the testnet's cumulative
-// activity over calendar time, for every wallet, not just heavily-reused
-// ones. ShadowPoll's circuits (castVote/closePoll/the constructor) never
-// touch shielded coins - only unshielded NIGHT (fees) and DUST (gas) - so
-// this only waits on those two lanes. This is a deliberate, evidence-based
-// narrowing of the original "wait for everything" approach, not a shortcut:
-// the actual historical failure mode this project hit (a chain-rejected
-// proof, "Custom error: 170" / InvalidDustSpendProof) was specifically about
-// the DUST lane's own merkle/witness state, not the shielded lane.
+// Tried dropping the shielded-lane requirement here once, on the theory
+// that ShadowPoll's circuits never touch shielded coins so shouldn't need
+// that lane synced. That theory was wrong: with only unshielded+dust
+// synced, a real deploy attempt still got rejected with the exact same
+// chain error (1010, Custom error 170 / InvalidDustSpendProof) that full
+// sync was originally introduced to prevent - confirmed empirically, not
+// just assumed. The likely explanation is that a spend proof has to
+// reference the wallet's view of some global state root spanning all three
+// lanes together, not just the lane being spent from, so a stale shielded
+// view produces an invalid proof even for a dust-only spend. All three
+// lanes stay required.
 export const syncWallet = async (logger: Logger, wallet: WalletFacade, maxWaitMs = 120 * 60_000) => {
   logger.info('Syncing wallet...');
 
@@ -138,13 +137,16 @@ export const syncWallet = async (logger: Logger, wallet: WalletFacade, maxWaitMs
     logger,
     wallet,
     (state) => {
+      const shieldedSynced = isProgressStrictlyComplete(state.shielded.state.progress);
       const unshieldedSynced = isProgressStrictlyComplete(state.unshielded.progress);
       const dustSynced = isProgressStrictlyComplete(state.dust.state.progress);
-      logger.debug(`Wallet synced state emission: { unshielded=${unshieldedSynced}, dust=${dustSynced} }`);
-      return unshieldedSynced && dustSynced ? state : undefined;
+      logger.debug(
+        `Wallet synced state emission: { shielded=${shieldedSynced}, unshielded=${unshieldedSynced}, dust=${dustSynced} }`,
+      );
+      return shieldedSynced && unshieldedSynced && dustSynced ? state : undefined;
     },
     maxWaitMs,
-    'wallet sync (unshielded + dust)',
+    'wallet sync (shielded + unshielded + dust)',
   );
 
   logger.info('Sync complete');
