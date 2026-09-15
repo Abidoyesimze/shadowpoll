@@ -119,23 +119,32 @@ export const waitForFacadeState = async <T>(
   }
 };
 
-export const syncWallet = async (logger: Logger, wallet: WalletFacade, maxWaitMs = 40 * 60_000) => {
+// Waiting on *shielded*-lane sync specifically has become impractically slow
+// on Preview (hours, not minutes) - shielded scanning has to trial-check
+// every shielded output ever emitted on the whole chain (not just this
+// wallet's own history), so its cost grows with the testnet's cumulative
+// activity over calendar time, for every wallet, not just heavily-reused
+// ones. ShadowPoll's circuits (castVote/closePoll/the constructor) never
+// touch shielded coins - only unshielded NIGHT (fees) and DUST (gas) - so
+// this only waits on those two lanes. This is a deliberate, evidence-based
+// narrowing of the original "wait for everything" approach, not a shortcut:
+// the actual historical failure mode this project hit (a chain-rejected
+// proof, "Custom error: 170" / InvalidDustSpendProof) was specifically about
+// the DUST lane's own merkle/witness state, not the shielded lane.
+export const syncWallet = async (logger: Logger, wallet: WalletFacade, maxWaitMs = 120 * 60_000) => {
   logger.info('Syncing wallet...');
 
   const state = await waitForFacadeState(
     logger,
     wallet,
     (state) => {
-      const shieldedSynced = isProgressStrictlyComplete(state.shielded.state.progress);
       const unshieldedSynced = isProgressStrictlyComplete(state.unshielded.progress);
       const dustSynced = isProgressStrictlyComplete(state.dust.state.progress);
-      logger.debug(
-        `Wallet synced state emission: { shielded=${shieldedSynced}, unshielded=${unshieldedSynced}, dust=${dustSynced} }`,
-      );
-      return shieldedSynced && unshieldedSynced && dustSynced ? state : undefined;
+      logger.debug(`Wallet synced state emission: { unshielded=${unshieldedSynced}, dust=${dustSynced} }`);
+      return unshieldedSynced && dustSynced ? state : undefined;
     },
     maxWaitMs,
-    'wallet sync (shielded + unshielded + dust)',
+    'wallet sync (unshielded + dust)',
   );
 
   logger.info('Sync complete');

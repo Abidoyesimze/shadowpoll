@@ -59,7 +59,10 @@ export const generateDust = async (
   const unshieldedKeystore = createKeystore(getUnshieldedSeed(walletSeed), networkId);
   const utxos = unshieldedState.availableCoins.filter((coin) => !coin.meta.registeredForDustGeneration);
 
-  const waitForDustBalance = (maxWaitMs = 40 * 60_000): Promise<bigint> =>
+  // DUST regeneration timing after a prior spend has been unpredictable in
+  // practice on Preview - sometimes under a minute, sometimes much longer -
+  // so this is deliberately generous rather than tuned to the common case.
+  const waitForDustBalance = (maxWaitMs = 90 * 60_000): Promise<bigint> =>
     waitForFacadeState(
       logger,
       walletFacade,
