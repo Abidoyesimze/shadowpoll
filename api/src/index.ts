@@ -29,6 +29,7 @@ export interface DeployedShadowPollAPI {
   readonly state$: Observable<ShadowPollDerivedState>;
 
   castVote: (choice: boolean) => Promise<void>;
+  closePoll: () => Promise<void>;
 }
 
 /**
@@ -70,12 +71,15 @@ export class ShadowPollAPI implements DeployedShadowPollAPI {
       ],
       (ledgerState, privateState) => {
         const nullifier = ShadowPoll.pureCircuits.nullifierFor(privateState.secretId);
+        const creatorNullifier = ShadowPoll.pureCircuits.creatorNullifierFor(privateState.secretId);
 
         return {
           question: ledgerState.question,
           yesVotes: ledgerState.yesVotes,
           noVotes: ledgerState.noVotes,
           hasVoted: ledgerState.voted.member(nullifier),
+          closed: ledgerState.closed,
+          isCreator: Buffer.compare(creatorNullifier, ledgerState.creatorNullifier) === 0,
         };
       },
     );
@@ -118,6 +122,28 @@ export class ShadowPollAPI implements DeployedShadowPollAPI {
     this.logger?.trace({
       transactionAdded: {
         circuit: 'castVote',
+        txHash: txData.public.txHash,
+        blockHeight: txData.public.blockHeight,
+      },
+    });
+  }
+
+  /**
+   * Permanently closes the poll, so `castVote` will reject any further votes.
+   *
+   * @remarks
+   * This method can fail during local circuit execution if the current private identity
+   * isn't the one that deployed this contract, or if the poll is already closed - in
+   * either case, no transaction is submitted.
+   */
+  async closePoll(): Promise<void> {
+    this.logger?.info('closingPoll');
+
+    const txData = await this.deployedContract.callTx.closePoll();
+
+    this.logger?.trace({
+      transactionAdded: {
+        circuit: 'closePoll',
         txHash: txData.public.txHash,
         blockHeight: txData.public.blockHeight,
       },

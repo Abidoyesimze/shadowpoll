@@ -62,4 +62,15 @@ export type ShadowPollDerivedState = {
    * `voted` nullifier set.
    */
   readonly hasVoted: boolean;
+
+  /** Whether the poll has been closed - `castVote` rejects once this is true. */
+  readonly closed: boolean;
+
+  /**
+   * Whether the current private identity is the poll's creator, derived by
+   * hashing the local secret ID (in the creator hash domain) and comparing
+   * it against the public `creatorNullifier` - never disclosed to anyone
+   * else, including other users of this same API instance.
+   */
+  readonly isCreator: boolean;
 };
