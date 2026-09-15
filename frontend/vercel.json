@@ -3,5 +3,6 @@
   "installCommand": "echo skip-default-install",
   "buildCommand": "cd .. && npm install && npm run build --workspace=contract && npm run build --workspace=api && cd frontend && npm run build",
   "outputDirectory": "dist",
-  "framework": "vite"
+  "framework": "vite",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

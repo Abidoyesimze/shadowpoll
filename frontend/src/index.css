@@ -48,6 +48,8 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   padding: 1rem clamp(1rem, 5vw, 3rem);
   background: rgba(10, 13, 19, 0.85);
   backdrop-filter: blur(10px);
@@ -58,6 +60,7 @@ h3 {
   font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: -0.01em;
+  text-decoration: none;
 }
 
 .topnav-live {
@@ -333,23 +336,32 @@ button,
   font-weight: 600;
 }
 
-/* ---------- live poll ---------- */
+/* ---------- app screen (the actual dApp, separate from the landing page) ---------- */
 
-.section-live {
-  padding-bottom: 5rem;
-}
-
-.live-poll-widget {
-  background: var(--card-2);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 1.75rem;
-}
-
-.live-poll-wallet {
+.app-shell {
+  min-height: 100vh;
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 1.25rem;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1;
+  max-width: 520px;
+  width: 100%;
+  margin: 0 auto;
+  padding: clamp(2rem, 6vw, 4rem) 1.5rem 3rem;
+}
+
+.app-footnote {
+  margin-top: 2rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.app-footnote code {
+  color: var(--text);
+  word-break: break-all;
 }
 
 .poll-card {

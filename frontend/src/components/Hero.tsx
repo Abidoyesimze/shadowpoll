@@ -1,4 +1,6 @@
-export const Hero = ({ onTryItLive }: { onTryItLive: () => void }) => (
+import { Link } from 'react-router-dom';
+
+export const Hero = () => (
   <section className="hero">
     <p className="eyebrow">Built on Midnight · Moonlight Challenges, Level 2</p>
     <h1>
@@ -14,9 +16,9 @@ export const Hero = ({ onTryItLive }: { onTryItLive: () => void }) => (
       way you voted or link a vote back to you.
     </p>
     <div className="hero-actions">
-      <button className="btn-primary" onClick={onTryItLive}>
-        Try the live poll ↓
-      </button>
+      <Link className="btn-primary" to="/app">
+        Launch the app →
+      </Link>
       <a className="btn-ghost" href="https://github.com/Abidoyesimze/shadowpoll" target="_blank" rel="noreferrer">
         View source on GitHub
       </a>
