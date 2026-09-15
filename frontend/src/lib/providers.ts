@@ -21,7 +21,7 @@ export const buildShadowPollProviders = async (wallet: LaceWalletBridge): Promis
   // `window` - native fetch requires the correct receiver and throws
   // "Illegal invocation" otherwise. Passing an explicitly bound fetch avoids
   // relying on however cross-fetch's own default export happens to be bound.
-  const zkConfigProvider = new FetchZkConfigProvider<'castVote'>(ZK_CONFIG_BASE_URL, window.fetch.bind(window));
+  const zkConfigProvider = new FetchZkConfigProvider<'castVote' | 'closePoll'>(ZK_CONFIG_BASE_URL, window.fetch.bind(window));
 
   // Proving happens either against a proof server the visitor runs locally
   // (opt in, matches the CLI's setup), or - by default - delegated to the
