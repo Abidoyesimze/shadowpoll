@@ -11,9 +11,17 @@ export ledger noVotes: Counter;
 // Nullifiers of everyone who has voted. Stops double-voting without ever
 // revealing *who* voted or *how* - only that a vote with this nullifier exists.
 export ledger voted: Set<Bytes<32>>;
+// Nullifier of the poll's creator, committed at deploy time in a separate
+// hash domain from voter nullifiers (see creatorNullifierFor). Lets
+// closePoll() verify the caller without ever revealing who the creator is -
+// same technique as voter identity, applied to a second, distinct role.
+export ledger creatorNullifier: Bytes<32>;
+export ledger closed: Boolean;
 
 constructor(question_: Opaque<"string">) {
   question = disclose(question_);
+  creatorNullifier = disclose(creatorNullifierFor(mySecretId()));
+  closed = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -29,6 +37,8 @@ witness mySecretId(): Bytes<32>;
 witness myChoice(): Boolean;
 
 export circuit castVote(): [] {
+  assert(!closed, "This poll is closed");
+
   // A nullifier derived from the caller's private secret ID stops the same
   // person from voting twice, without ever revealing who they are.
   const nullifier = disclose(nullifierFor(mySecretId()));
@@ -46,9 +56,27 @@ export circuit castVote(): [] {
   }
 }
 
+// Permanently stops further voting. Only the original creator can do this -
+// proven the same way a voter proves their identity hasn't voted yet: by
+// producing a nullifier that matches the one committed at deploy time,
+// without ever revealing the underlying secret identity.
+export circuit closePoll(): [] {
+  assert(!closed, "This poll is already closed");
+  const nullifier = disclose(creatorNullifierFor(mySecretId()));
+  assert(nullifier == creatorNullifier, "Only the poll creator can close it");
+  closed = true;
+}
+
 // Derives the public nullifier for a given private secret ID. Exposed so
 // callers can locally check whether their identity has already voted,
 // without needing to disclose the secret ID itself.
 export circuit nullifierFor(secretId: Bytes<32>): Bytes<32> {
   return persistentHash<Vector<2, Bytes<32>>>([pad(32, "shadowpoll:nf:"), secretId]);
+}
+
+// Same idea as nullifierFor, but in its own hash domain so a creator's
+// nullifier and their voter nullifier (if they also vote, using the same
+// secret ID) can never collide or be linked to each other.
+export circuit creatorNullifierFor(secretId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "shadowpoll:creator:"), secretId]);
 }

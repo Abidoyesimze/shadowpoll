@@ -40,4 +40,9 @@ export class ShadowPollSimulator {
     this.circuitContext = this.contract.impureCircuits.castVote(this.circuitContext).context;
     return ledger(this.circuitContext.currentQueryContext.state);
   }
+
+  public closePoll(): Ledger {
+    this.circuitContext = this.contract.impureCircuits.closePoll(this.circuitContext).context;
+    return ledger(this.circuitContext.currentQueryContext.state);
+  }
 }

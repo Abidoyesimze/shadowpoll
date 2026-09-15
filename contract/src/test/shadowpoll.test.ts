@@ -82,4 +82,59 @@ describe('ShadowPoll smart contract', () => {
 
     expect(afterSecond.length).toEqual(afterFirst.length + 1);
   });
+
+  it('lets the creator close the poll', () => {
+    const creatorId = randomBytes(32);
+    const simulator = new ShadowPollSimulator('Ship it?', creatorId, true);
+    expect(simulator.getLedger().closed).toEqual(false);
+
+    simulator.closePoll();
+    expect(simulator.getLedger().closed).toEqual(true);
+  });
+
+  it('rejects votes once the poll is closed', () => {
+    const creatorId = randomBytes(32);
+    const simulator = new ShadowPollSimulator('Ship it?', creatorId, true);
+    simulator.closePoll();
+
+    expect(() => simulator.castVote()).toThrow('failed assert: This poll is closed');
+
+    // A rejected vote after closing must not have changed the public tally.
+    const ledgerState = simulator.getLedger();
+    expect(ledgerState.yesVotes).toEqual(0n);
+    expect(ledgerState.noVotes).toEqual(0n);
+  });
+
+  it('rejects closePoll from anyone other than the creator', () => {
+    const creatorId = randomBytes(32);
+    const simulator = new ShadowPollSimulator('Ship it?', creatorId, true);
+
+    // A different identity (e.g. a regular voter) cannot close the poll.
+    simulator.switchUser(randomBytes(32), true);
+    expect(() => simulator.closePoll()).toThrow('failed assert: Only the poll creator can close it');
+    expect(simulator.getLedger().closed).toEqual(false);
+  });
+
+  it('rejects closing an already-closed poll', () => {
+    const creatorId = randomBytes(32);
+    const simulator = new ShadowPollSimulator('Ship it?', creatorId, true);
+    simulator.closePoll();
+
+    expect(() => simulator.closePoll()).toThrow('failed assert: This poll is already closed');
+  });
+
+  it('does not link the creator role to the creator\'s own vote', () => {
+    // The creator can also vote, using the same secret ID - their voter
+    // nullifier and creator nullifier live in separate hash domains, so
+    // nothing on the public ledger connects the two roles.
+    const creatorId = randomBytes(32);
+    const simulator = new ShadowPollSimulator('Ship it?', creatorId, true);
+    simulator.castVote();
+
+    const ledgerState = simulator.getLedger();
+    expect(ledgerState.voted.size()).toEqual(1n);
+    // The creator nullifier (a fixed, separate value) is never itself a
+    // member of the voter nullifier set.
+    expect(ledgerState.voted.member(ledgerState.creatorNullifier)).toEqual(false);
+  });
 });

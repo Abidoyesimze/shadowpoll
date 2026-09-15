@@ -7,20 +7,26 @@ export type Witnesses<PS> = {
 
 export type ImpureCircuits<PS> = {
   castVote(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
+  closePoll(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type ProvableCircuits<PS> = {
   castVote(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
+  closePoll(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type PureCircuits = {
   nullifierFor(secretId_0: Uint8Array): Uint8Array;
+  creatorNullifierFor(secretId_0: Uint8Array): Uint8Array;
 }
 
 export type Circuits<PS> = {
   castVote(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
+  closePoll(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
   nullifierFor(context: __compactRuntime.CircuitContext<PS>,
                secretId_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  creatorNullifierFor(context: __compactRuntime.CircuitContext<PS>,
+                      secretId_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
 }
 
 export type Ledger = {
@@ -33,6 +39,8 @@ export type Ledger = {
     member(elem_0: Uint8Array): boolean;
     [Symbol.iterator](): Iterator<Uint8Array>
   };
+  readonly creatorNullifier: Uint8Array;
+  readonly closed: boolean;
 }
 
 export type ContractReferenceLocations = any;

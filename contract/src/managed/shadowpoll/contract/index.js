@@ -77,7 +77,7 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('castVote',
                                      'argument 1 (as invoked from Typescript)',
-                                     'shadowpoll.compact line 31 char 1',
+                                     'shadowpoll.compact line 39 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
@@ -92,12 +92,44 @@ export class Contract {
         partialProofData.output = { value: [], alignment: [] };
         return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
       },
+      closePoll: (...args_1) => {
+        if (args_1.length !== 1) {
+          throw new __compactRuntime.CompactError(`closePoll: expected 1 argument (as invoked from Typescript), received ${args_1.length}`);
+        }
+        const contextOrig_0 = args_1[0];
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
+          __compactRuntime.typeError('closePoll',
+                                     'argument 1 (as invoked from Typescript)',
+                                     'shadowpoll.compact line 63 char 1',
+                                     'CircuitContext',
+                                     contextOrig_0)
+        }
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
+        const partialProofData = {
+          input: { value: [], alignment: [] },
+          output: undefined,
+          publicTranscript: [],
+          privateTranscriptOutputs: []
+        };
+        const result_0 = this._closePoll_0(context, partialProofData);
+        partialProofData.output = { value: [], alignment: [] };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
+      },
       nullifierFor(context, ...args_1) {
         return { result: pureCircuits.nullifierFor(...args_1), context };
+      },
+      creatorNullifierFor(context, ...args_1) {
+        return { result: pureCircuits.creatorNullifierFor(...args_1), context };
       }
     };
-    this.impureCircuits = { castVote: this.circuits.castVote };
-    this.provableCircuits = { castVote: this.circuits.castVote };
+    this.impureCircuits = {
+      castVote: this.circuits.castVote,
+      closePoll: this.circuits.closePoll
+    };
+    this.provableCircuits = {
+      castVote: this.circuits.castVote,
+      closePoll: this.circuits.closePoll
+    };
   }
   initialState(...args_0) {
     if (args_0.length !== 2) {
@@ -123,8 +155,11 @@ export class Contract {
     stateValue_0 = stateValue_0.arrayPush(__compactRuntime.StateValue.newNull());
     stateValue_0 = stateValue_0.arrayPush(__compactRuntime.StateValue.newNull());
     stateValue_0 = stateValue_0.arrayPush(__compactRuntime.StateValue.newNull());
+    stateValue_0 = stateValue_0.arrayPush(__compactRuntime.StateValue.newNull());
+    stateValue_0 = stateValue_0.arrayPush(__compactRuntime.StateValue.newNull());
     state_0.data = new __compactRuntime.ChargedState(stateValue_0);
     state_0.setOperation('castVote', new __compactRuntime.ContractOperation());
+    state_0.setOperation('closePoll', new __compactRuntime.ContractOperation());
     const context = __compactRuntime.createCircuitContext(__compactRuntime.dummyContractAddress(), constructorContext_0.initialZswapLocalState.coinPublicKey, state_0.data, constructorContext_0.initialPrivateState);
     const partialProofData = {
       input: { value: [], alignment: [] },
@@ -177,11 +212,53 @@ export class Contract {
                                       partialProofData,
                                       [
                                        { push: { storage: false,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_9.toValue(4n),
+                                                                                              alignment: _descriptor_9.alignment() }).encode() } },
+                                       { push: { storage: true,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(new Uint8Array(32)),
+                                                                                              alignment: _descriptor_0.alignment() }).encode() } },
+                                       { ins: { cached: false, n: 1 } }]);
+    __compactRuntime.queryLedgerState(context,
+                                      partialProofData,
+                                      [
+                                       { push: { storage: false,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_9.toValue(5n),
+                                                                                              alignment: _descriptor_9.alignment() }).encode() } },
+                                       { push: { storage: true,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_1.toValue(false),
+                                                                                              alignment: _descriptor_1.alignment() }).encode() } },
+                                       { ins: { cached: false, n: 1 } }]);
+    __compactRuntime.queryLedgerState(context,
+                                      partialProofData,
+                                      [
+                                       { push: { storage: false,
                                                  value: __compactRuntime.StateValue.newCell({ value: _descriptor_9.toValue(0n),
                                                                                               alignment: _descriptor_9.alignment() }).encode() } },
                                        { push: { storage: true,
                                                  value: __compactRuntime.StateValue.newCell({ value: _descriptor_8.toValue(question__0),
                                                                                               alignment: _descriptor_8.alignment() }).encode() } },
+                                       { ins: { cached: false, n: 1 } }]);
+    const tmp_0 = this._creatorNullifierFor_0(this._mySecretId_0(context,
+                                                                 partialProofData));
+    __compactRuntime.queryLedgerState(context,
+                                      partialProofData,
+                                      [
+                                       { push: { storage: false,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_9.toValue(4n),
+                                                                                              alignment: _descriptor_9.alignment() }).encode() } },
+                                       { push: { storage: true,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(tmp_0),
+                                                                                              alignment: _descriptor_0.alignment() }).encode() } },
+                                       { ins: { cached: false, n: 1 } }]);
+    __compactRuntime.queryLedgerState(context,
+                                      partialProofData,
+                                      [
+                                       { push: { storage: false,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_9.toValue(5n),
+                                                                                              alignment: _descriptor_9.alignment() }).encode() } },
+                                       { push: { storage: true,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_1.toValue(false),
+                                                                                              alignment: _descriptor_1.alignment() }).encode() } },
                                        { ins: { cached: false, n: 1 } }]);
     state_0.data = new __compactRuntime.ChargedState(context.currentQueryContext.state.state);
     return {
@@ -201,7 +278,7 @@ export class Contract {
     if (!(result_0.buffer instanceof ArrayBuffer && result_0.BYTES_PER_ELEMENT === 1 && result_0.length === 32)) {
       __compactRuntime.typeError('mySecretId',
                                  'return value',
-                                 'shadowpoll.compact line 26 char 1',
+                                 'shadowpoll.compact line 34 char 1',
                                  'Bytes<32>',
                                  result_0)
     }
@@ -218,7 +295,7 @@ export class Contract {
     if (!(typeof(result_0) === 'boolean')) {
       __compactRuntime.typeError('myChoice',
                                  'return value',
-                                 'shadowpoll.compact line 29 char 1',
+                                 'shadowpoll.compact line 37 char 1',
                                  'Boolean',
                                  result_0)
     }
@@ -229,6 +306,19 @@ export class Contract {
     return result_0;
   }
   _castVote_0(context, partialProofData) {
+    __compactRuntime.assert(!_descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                       partialProofData,
+                                                                                       [
+                                                                                        { dup: { n: 0 } },
+                                                                                        { idx: { cached: false,
+                                                                                                 pushPath: false,
+                                                                                                 path: [
+                                                                                                        { tag: 'value',
+                                                                                                          value: { value: _descriptor_9.toValue(5n),
+                                                                                                                   alignment: _descriptor_9.alignment() } }] } },
+                                                                                        { popeq: { cached: false,
+                                                                                                   result: undefined } }]).value),
+                            'This poll is closed');
     const nullifier_0 = this._nullifierFor_0(this._mySecretId_0(context,
                                                                 partialProofData));
     __compactRuntime.assert(!_descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
@@ -301,9 +391,59 @@ export class Contract {
     }
     return [];
   }
+  _closePoll_0(context, partialProofData) {
+    __compactRuntime.assert(!_descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                       partialProofData,
+                                                                                       [
+                                                                                        { dup: { n: 0 } },
+                                                                                        { idx: { cached: false,
+                                                                                                 pushPath: false,
+                                                                                                 path: [
+                                                                                                        { tag: 'value',
+                                                                                                          value: { value: _descriptor_9.toValue(5n),
+                                                                                                                   alignment: _descriptor_9.alignment() } }] } },
+                                                                                        { popeq: { cached: false,
+                                                                                                   result: undefined } }]).value),
+                            'This poll is already closed');
+    const nullifier_0 = this._creatorNullifierFor_0(this._mySecretId_0(context,
+                                                                       partialProofData));
+    __compactRuntime.assert(this._equal_0(nullifier_0,
+                                          _descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                                    partialProofData,
+                                                                                                    [
+                                                                                                     { dup: { n: 0 } },
+                                                                                                     { idx: { cached: false,
+                                                                                                              pushPath: false,
+                                                                                                              path: [
+                                                                                                                     { tag: 'value',
+                                                                                                                       value: { value: _descriptor_9.toValue(4n),
+                                                                                                                                alignment: _descriptor_9.alignment() } }] } },
+                                                                                                     { popeq: { cached: false,
+                                                                                                                result: undefined } }]).value)),
+                            'Only the poll creator can close it');
+    __compactRuntime.queryLedgerState(context,
+                                      partialProofData,
+                                      [
+                                       { push: { storage: false,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_9.toValue(5n),
+                                                                                              alignment: _descriptor_9.alignment() }).encode() } },
+                                       { push: { storage: true,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_1.toValue(true),
+                                                                                              alignment: _descriptor_1.alignment() }).encode() } },
+                                       { ins: { cached: false, n: 1 } }]);
+    return [];
+  }
   _nullifierFor_0(secretId_0) {
     return this._persistentHash_0([new Uint8Array([115, 104, 97, 100, 111, 119, 112, 111, 108, 108, 58, 110, 102, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
                                    secretId_0]);
+  }
+  _creatorNullifierFor_0(secretId_0) {
+    return this._persistentHash_0([new Uint8Array([115, 104, 97, 100, 111, 119, 112, 111, 108, 108, 58, 99, 114, 101, 97, 116, 111, 114, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+                                   secretId_0]);
+  }
+  _equal_0(x0, y0) {
+    if (!x0.every((x, i) => y0[i] === x)) { return false; }
+    return true;
   }
 }
 export function ledger(stateOrChargedState) {
@@ -439,6 +579,34 @@ export function ledger(stateOrChargedState) {
         const self_0 = state.asArray()[3];
         return self_0.asMap().keys().map((elem) => _descriptor_0.fromValue(elem.value))[Symbol.iterator]();
       }
+    },
+    get creatorNullifier() {
+      return _descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                       partialProofData,
+                                                                       [
+                                                                        { dup: { n: 0 } },
+                                                                        { idx: { cached: false,
+                                                                                 pushPath: false,
+                                                                                 path: [
+                                                                                        { tag: 'value',
+                                                                                          value: { value: _descriptor_9.toValue(4n),
+                                                                                                   alignment: _descriptor_9.alignment() } }] } },
+                                                                        { popeq: { cached: false,
+                                                                                   result: undefined } }]).value);
+    },
+    get closed() {
+      return _descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                       partialProofData,
+                                                                       [
+                                                                        { dup: { n: 0 } },
+                                                                        { idx: { cached: false,
+                                                                                 pushPath: false,
+                                                                                 path: [
+                                                                                        { tag: 'value',
+                                                                                          value: { value: _descriptor_9.toValue(5n),
+                                                                                                   alignment: _descriptor_9.alignment() } }] } },
+                                                                        { popeq: { cached: false,
+                                                                                   result: undefined } }]).value);
     }
   };
 }
@@ -457,11 +625,25 @@ export const pureCircuits = {
     if (!(secretId_0.buffer instanceof ArrayBuffer && secretId_0.BYTES_PER_ELEMENT === 1 && secretId_0.length === 32)) {
       __compactRuntime.typeError('nullifierFor',
                                  'argument 1',
-                                 'shadowpoll.compact line 52 char 1',
+                                 'shadowpoll.compact line 73 char 1',
                                  'Bytes<32>',
                                  secretId_0)
     }
     return _dummyContract._nullifierFor_0(secretId_0);
+  },
+  creatorNullifierFor: (...args_0) => {
+    if (args_0.length !== 1) {
+      throw new __compactRuntime.CompactError(`creatorNullifierFor: expected 1 argument (as invoked from Typescript), received ${args_0.length}`);
+    }
+    const secretId_0 = args_0[0];
+    if (!(secretId_0.buffer instanceof ArrayBuffer && secretId_0.BYTES_PER_ELEMENT === 1 && secretId_0.length === 32)) {
+      __compactRuntime.typeError('creatorNullifierFor',
+                                 'argument 1',
+                                 'shadowpoll.compact line 80 char 1',
+                                 'Bytes<32>',
+                                 secretId_0)
+    }
+    return _dummyContract._creatorNullifierFor_0(secretId_0);
   }
 };
 export const contractReferenceLocations =
