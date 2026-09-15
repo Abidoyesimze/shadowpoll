@@ -7,6 +7,7 @@ import { PrivacyModel } from './components/PrivacyModel';
 import { PollCard } from './components/PollCard';
 import { ConnectButton } from './components/ConnectButton';
 import { VoteButtons } from './components/VoteButtons';
+import { CreatorControls } from './components/CreatorControls';
 import { Footer } from './components/Footer';
 
 const scrollToPoll = () => document.getElementById('live-poll')?.scrollIntoView({ behavior: 'smooth' });
@@ -15,13 +16,18 @@ export const App = () => {
   const pollStatus = usePollState();
   const { state: walletState, connect, disconnect } = useWallet();
   const [hasVoted, setHasVoted] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
 
   useEffect(() => {
     if (walletState.status !== 'connected') {
       setHasVoted(false);
+      setIsCreator(false);
       return;
     }
-    const subscription = walletState.api.state$.subscribe((derived) => setHasVoted(derived.hasVoted));
+    const subscription = walletState.api.state$.subscribe((derived) => {
+      setHasVoted(derived.hasVoted);
+      setIsCreator(derived.isCreator);
+    });
     return () => subscription.unsubscribe();
   }, [walletState]);
 
@@ -54,7 +60,10 @@ export const App = () => {
               <>
                 <PollCard poll={pollStatus.poll} />
                 {walletState.status === 'connected' ? (
-                  <VoteButtons api={walletState.api} hasVoted={hasVoted} />
+                  <>
+                    <VoteButtons api={walletState.api} hasVoted={hasVoted} closed={pollStatus.poll.closed} />
+                    {isCreator && <CreatorControls api={walletState.api} closed={pollStatus.poll.closed} />}
+                  </>
                 ) : (
                   <p className="hint">Connect a Midnight wallet (e.g. Lace) above to cast a vote.</p>
                 )}

@@ -8,9 +8,13 @@ export const PollCard = ({ poll }: { poll: PollState }) => {
   return (
     <div className="poll-card">
       <div className="poll-card-head">
-        <span className="live-badge">
-          <span className="live-dot" /> Live on {NETWORK}
-        </span>
+        {poll.closed ? (
+          <span className="closed-badge">Closed</span>
+        ) : (
+          <span className="live-badge">
+            <span className="live-dot" /> Live on {NETWORK}
+          </span>
+        )}
       </div>
       <h2>{poll.question}</h2>
       <div className="tally">
@@ -23,9 +27,11 @@ export const PollCard = ({ poll }: { poll: PollState }) => {
         </div>
       </div>
       <p className="hint">
-        {total === 0n
-          ? 'No votes yet - be the first. Nobody will ever see how you voted.'
-          : `${total.toString()} vote${total === 1n ? '' : 's'} cast. This tally is the only thing anyone can see - individual votes stay private.`}
+        {poll.closed
+          ? `Voting is closed. Final tally: ${total.toString()} vote${total === 1n ? '' : 's'}.`
+          : total === 0n
+            ? 'No votes yet - be the first. Nobody will ever see how you voted.'
+            : `${total.toString()} vote${total === 1n ? '' : 's'} cast. This tally is the only thing anyone can see - individual votes stay private.`}
       </p>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ShadowPollAPI } from '@shadowpoll/api';
 
-export const VoteButtons = ({ api, hasVoted }: { api: ShadowPollAPI; hasVoted: boolean }) => {
+export const VoteButtons = ({ api, hasVoted, closed }: { api: ShadowPollAPI; hasVoted: boolean; closed: boolean }) => {
   const [pending, setPending] = useState<'yes' | 'no' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +24,10 @@ export const VoteButtons = ({ api, hasVoted }: { api: ShadowPollAPI; hasVoted: b
         contract.
       </p>
     );
+  }
+
+  if (closed) {
+    return <p className="hint">Voting is closed - this poll no longer accepts new votes.</p>;
   }
 
   return (

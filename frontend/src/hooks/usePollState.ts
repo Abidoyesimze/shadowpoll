@@ -11,6 +11,7 @@ export type PollState = {
   question: string;
   yesVotes: bigint;
   noVotes: bigint;
+  closed: boolean;
 };
 
 export type PollStateStatus =
@@ -28,7 +29,12 @@ export const usePollState = (): PollStateStatus => {
         const ledgerState = ledger(contractState.data);
         setStatus({
           status: 'ready',
-          poll: { question: ledgerState.question, yesVotes: ledgerState.yesVotes, noVotes: ledgerState.noVotes },
+          poll: {
+            question: ledgerState.question,
+            yesVotes: ledgerState.yesVotes,
+            noVotes: ledgerState.noVotes,
+            closed: ledgerState.closed,
+          },
         });
       },
       error: (error) => setStatus({ status: 'error', message: error instanceof Error ? error.message : String(error) }),
