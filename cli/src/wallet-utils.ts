@@ -130,7 +130,7 @@ export const waitForFacadeState = async <T>(
 // lanes together, not just the lane being spent from, so a stale shielded
 // view produces an invalid proof even for a dust-only spend. All three
 // lanes stay required.
-export const syncWallet = async (logger: Logger, wallet: WalletFacade, maxWaitMs = 120 * 60_000) => {
+export const syncWallet = async (logger: Logger, wallet: WalletFacade, maxWaitMs = 240 * 60_000) => {
   logger.info('Syncing wallet...');
 
   const state = await waitForFacadeState(
