@@ -9,7 +9,7 @@ export type Network = 'preview' | 'preprod';
 export const NETWORK: Network = (import.meta.env.VITE_NETWORK as Network) ?? 'preview';
 
 export const CONTRACT_ADDRESS =
-  import.meta.env.VITE_CONTRACT_ADDRESS ?? 'e5facde142e36093a5430224340c8ebf7675ed90fdfdeb6be7183f895458d34d';
+  import.meta.env.VITE_CONTRACT_ADDRESS ?? '2daaffd761b9695e4ddede415d83b7dade6b999ea0da825e60ba7c9c6b55d3a7';
 
 export const INDEXER_HTTP_URL = `https://indexer.${NETWORK}.midnight.network/api/v4/graphql`;
 export const INDEXER_WS_URL = `wss://indexer.${NETWORK}.midnight.network/api/v4/graphql/ws`;

@@ -5,7 +5,7 @@
 A private voting/polling contract for [Midnight](https://midnight.network), built for the **Moonlight Challenges** — [Level 1: New Moon](#level-1--new-moon), [Level 2: First Crescent](#level-2--first-crescent), and [Level 3: Half Moon](#level-3--half-moon).
 
 **Live demo:** [shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)
-**Contract (Preview):** [`e5facde142e36093a5430224340c8ebf7675ed90fdfdeb6be7183f895458d34d`](https://indexer.preview.midnight.network/api/v4/graphql) — see [Level 2](#level-2--first-crescent) for why Preview, not Preprod
+**Contract (Preview):** [`2daaffd761b9695e4ddede415d83b7dade6b999ea0da825e60ba7c9c6b55d3a7`](https://indexer.preview.midnight.network/api/v4/graphql) — see [Level 2](#level-2--first-crescent) for why Preview, not Preprod
 **Demo video (Level 2):** [Watch on Loom](https://www.loom.com/share/0acbb755c90d44e886c8d400ccb9c9e4)
 **Demo video (Level 3):** _pending_ - to be recorded by following [`docs/demo-script-level3.md`](docs/demo-script-level3.md)
 **Chosen idea:** Private Voting — anonymous ballots with publicly verifiable tallies (see [Level 3](#level-3--half-moon))
@@ -111,7 +111,7 @@ Each run logs progress to `logs/<network>-direct/<timestamp>.log`, culminating i
 
 ![Contract deployed to Preview with address shown, and independently confirmed via the indexer](docs/screenshots/deploy.png)
 
-**Deployed contract (Preview):** [`e5facde142e36093a5430224340c8ebf7675ed90fdfdeb6be7183f895458d34d`](https://indexer.preview.midnight.network/api/v4/graphql) — independently queryable via the Preview indexer's `contract(address: "...")` GraphQL query.
+**Deployed contract (Preview), original Level 1 version:** [`e5facde142e36093a5430224340c8ebf7675ed90fdfdeb6be7183f895458d34d`](https://indexer.preview.midnight.network/api/v4/graphql) — independently queryable via the Preview indexer's `contract(address: "...")` GraphQL query. Superseded for Level 3 by a redeploy with `closePoll` added - see [Level 3](#level-3--half-moon) for the current live contract address.
 
 To re-use a specific wallet instead of generating a fresh one, set `WALLET_SEED` (or `WALLET_MNEMONIC`) in the environment before running the deploy script. Never use a seed that holds real funds — this script logs the seed and persists private state to disk.
 
@@ -166,7 +166,7 @@ $ curl -X POST https://midnight-tmnight-preprod.nethermind.dev/api/request-token
 {"status":"error","message":"Captcha verification failed: invalid-input-response"}
 ```
 
-A real captcha token only comes from a human completing the challenge in a browser, so this contract is deployed to **Preview** instead - the same address from [Level 1](#deploying-to-preview--preprod) - with the frontend's Lace integration, circuit call, and privacy behavior otherwise identical to what Level 2 asks for on Preprod. Swapping networks once the faucet is fixed is a one-line env var change.
+A real captcha token only comes from a human completing the challenge in a browser, so this contract is deployed to **Preview** instead - originally the same address from [Level 1](#deploying-to-preview--preprod), later redeployed for Level 3 with `closePoll` added (see [Level 3](#level-3--half-moon)) - with the frontend's Lace integration, circuit call, and privacy behavior otherwise identical to what Level 2 asks for on Preprod. Swapping networks once the faucet is fixed is a one-line env var change.
 
 ### Privacy claim
 
@@ -183,6 +183,12 @@ A polished, production-grade dApp: tests, CI/CD, and a chosen problem from the M
 ### Chosen idea: Private Voting
 
 ShadowPoll already *is* "Private Voting — anonymous ballots with publicly verifiable tallies," the first idea on the provided list - Levels 1 and 2 built exactly this, so Level 3 is about hardening it (tests, CI, honest documentation of what's real vs. in-progress) rather than starting a new project. See [Product idea](#product-idea) above for the full pitch, and [`docs/product-proposal.md`](docs/product-proposal.md) for the standalone proposal write-up.
+
+### Deployed contract
+
+Level 3 adds `closePoll` to the contract (see [Public state vs. private witness](#public-state-vs-private-witness) above), which changes the ledger's on-chain schema, so it needed a fresh deploy rather than reusing the Level 1/2 address:
+
+**Deployed contract (Preview):** [`2daaffd761b9695e4ddede415d83b7dade6b999ea0da825e60ba7c9c6b55d3a7`](https://indexer.preview.midnight.network/api/v4/graphql) — independently queryable via the Preview indexer's `contract(address: "...")` GraphQL query. This is the address the live demo and frontend now point at.
 
 ### Tests
 
