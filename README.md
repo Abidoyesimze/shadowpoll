@@ -7,7 +7,7 @@ A private voting/polling contract for [Midnight](https://midnight.network), buil
 **Live demo:** [shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)
 **Contract (Preview):** [`e5facde142e36093a5430224340c8ebf7675ed90fdfdeb6be7183f895458d34d`](https://indexer.preview.midnight.network/api/v4/graphql) — see [Level 2](#level-2--first-crescent) for why Preview, not Preprod
 **Demo video (Level 2):** [Watch on Loom](https://www.loom.com/share/0acbb755c90d44e886c8d400ccb9c9e4)
-**Demo video (Level 3):** _pending_
+**Demo video (Level 3):** _pending_ - to be recorded by following [`docs/demo-script-level3.md`](docs/demo-script-level3.md)
 **Chosen idea:** Private Voting — anonymous ballots with publicly verifiable tallies (see [Level 3](#level-3--half-moon))
 
 ## Product idea
@@ -20,15 +20,16 @@ This is the core privacy pattern the contract demonstrates:
 
 | | Public ledger state | Private witness |
 |---|---|---|
-| **What** | `question`, `yesVotes`, `noVotes`, `voted` (a set of nullifiers) | `mySecretId` (a persistent per-voter secret), `myChoice` (this vote's yes/no) |
-| **Who can see it** | Anyone reading the chain / indexer | Only the voter's own wallet — resolved locally, never transmitted |
-| **Why** | The whole point of a poll is a publicly verifiable result | The whole point of privacy is that no one can link a person to a vote |
+| **What** | `question`, `yesVotes`, `noVotes`, `voted` (a set of nullifiers), `creatorNullifier`, `closed` | `mySecretId` (a persistent per-identity secret), `myChoice` (this vote's yes/no) |
+| **Who can see it** | Anyone reading the chain / indexer | Only that identity's own wallet — resolved locally, never transmitted |
+| **Why** | The whole point of a poll is a publicly verifiable result | The whole point of privacy is that no one can link a person to a vote, or to the fact that they created the poll |
 
 Concretely, in [`contract/src/shadowpoll.compact`](contract/src/shadowpoll.compact):
 
 - `castVote()` derives a **nullifier** — `persistentHash(secretId)` — from the voter's private `mySecretId` witness and `disclose()`s *only that hash* to the public `voted` set. This proves "this identity hasn't voted yet" without ever revealing the identity itself, since the hash can't be reversed back to the secret.
 - The voter's `myChoice` witness (yes/no) is `disclose()`d at the point it's used to decide which counter (`yesVotes` or `noVotes`) to increment. That disclosure is deliberate and unavoidable — the aggregate tally *is* the public output of a poll — but because it's never combined with the nullifier or any other identifying data in the same disclosure, the running totals are the only thing anyone can observe. Nothing on-chain ties a specific increment back to a specific voter.
 - Two different people voting the same way produce two different nullifiers (since each has a different `secretId`), so even repeated identical votes never collide or leak linkage.
+- **`closePoll()` applies the identical technique to a second, separate role.** The poll's creator commits a `creatorNullifier` at deploy time (the same `mySecretId`, hashed in its own domain via `creatorNullifierFor` so it can never collide with - or be linked to - that same identity's voter nullifier). Closing the poll means re-deriving that nullifier and proving it matches, without ever disclosing *who* the creator is. A creator who also votes leaves two unlinkable public traces, not one.
 
 This mirrors the general Compact pattern: keep everything in `witness` functions by default, and reach for `disclose()` only at the exact point where a value is deliberately meant to become public — never by accident.
 
@@ -189,7 +190,7 @@ ShadowPoll already *is* "Private Voting — anonymous ballots with publicly veri
 npm run test --workspace=contract
 ```
 
-6 tests in [`contract/src/test/shadowpoll.test.ts`](contract/src/test/shadowpoll.test.ts), each checking a specific privacy or correctness property rather than just exercising code paths:
+11 tests in [`contract/src/test/shadowpoll.test.ts`](contract/src/test/shadowpoll.test.ts), each checking a specific privacy or correctness property rather than just exercising code paths:
 
 - initializes public ledger state deterministically
 - casting a yes vote updates only the public tally
@@ -197,8 +198,13 @@ npm run test --workspace=contract
 - accumulates the tally correctly across multiple distinct voters
 - rejects a second vote from the same private identity
 - does not reveal a voter identity across independent votes with the same choice
+- lets the creator close the poll
+- rejects votes once the poll is closed
+- rejects `closePoll` from anyone other than the creator
+- rejects closing an already-closed poll
+- does not link the creator role to the creator's own vote
 
-![6 tests passing](docs/screenshots/tests-passing.png)
+![11 tests passing](docs/screenshots/tests-passing.png)
 
 ### CI/CD
 
@@ -215,11 +221,14 @@ Anyone with access to the Preview indexer or a block explorer - not just other p
 - The current Yes/No tally at any point in time.
 - That *some* identity cast *a* vote, each time the `voted` nullifier set gains a new entry.
 - The total number of votes cast (size of the `voted` set) vs. the sum of yesVotes + noVotes (these always match, which is itself a publicly verifiable integrity property - the tally can't be tampered with independently of real votes).
+- Whether the poll is open or `closed`, and the (opaque) `creatorNullifier` committed at deploy time.
 
 **An observer *cannot* learn:**
 - Which wallet/identity cast any specific vote - the nullifier (`persistentHash(secretId)`) is one-way; there's no computation that recovers `secretId` from it.
 - How any specific identity voted - `myChoice` is a private witness that only ever contributes to the two aggregate counters, never disclosed alongside anything identifying.
 - Whether two different nullifiers belong to related or unrelated people - nullifiers reveal nothing about the wallets/identities that produced them.
+- **Who the poll's creator is** - `creatorNullifier` is exactly as opaque as any voter nullifier; closing the poll proves the caller knows the right secret without revealing it.
+- **Whether the creator also voted** - a creator's voter nullifier and creator nullifier live in separate hash domains (`creatorNullifierFor` vs. `nullifierFor`) specifically so the two roles can never be linked to each other, even by someone who already knows both nullifiers.
 - Even the poll's own deployer/creator gets none of the above beyond what the public ledger already shows everyone else - there's no privileged read path.
 
 The one deliberate exception is unavoidable and stated plainly: the *aggregate* tally is intentionally public, because a poll whose result nobody can see isn't a poll. Privacy here means *ballot* privacy, not *result* privacy.
