@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react';
-import type { WalletConnectionState } from '../hooks/useWallet';
 import { LaceWalletBridge } from '../lib/wallet-bridge';
+
+// Structural subset of both useWallet's WalletConnectionState (which also
+// carries a joined ShadowPollAPI) and useLaceWallet's LaceConnectionState
+// (which carries providers instead) - this component only ever needs the
+// connection status and address, so it accepts either without caring which.
+export type WalletUIState =
+  | { status: 'disconnected' }
+  | { status: 'connecting' }
+  | { status: 'connected'; address: string }
+  | { status: 'error'; message: string };
 
 export const ConnectButton = ({
   state,
   onConnect,
   onDisconnect,
 }: {
-  state: WalletConnectionState;
+  state: WalletUIState;
   onConnect: () => void;
   onDisconnect: () => void;
 }) => {

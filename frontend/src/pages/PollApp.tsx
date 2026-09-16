@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { usePollState } from '../hooks/usePollState';
 import { useWallet } from '../hooks/useWallet';
 import { PollCard } from '../components/PollCard';
@@ -9,8 +9,13 @@ import { CreatorControls } from '../components/CreatorControls';
 import { CONTRACT_ADDRESS, NETWORK } from '../lib/env';
 
 export const PollApp = () => {
-  const pollStatus = usePollState();
-  const { state: walletState, connect, disconnect } = useWallet();
+  // /app shows the default poll from env; /app/:contractAddress shows any
+  // other deployed ShadowPoll contract, e.g. one just created via /create.
+  const { contractAddress: routeAddress } = useParams<{ contractAddress?: string }>();
+  const contractAddress = routeAddress ?? CONTRACT_ADDRESS;
+
+  const pollStatus = usePollState(contractAddress);
+  const { state: walletState, connect, disconnect } = useWallet(contractAddress);
   const [hasVoted, setHasVoted] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
 
@@ -54,7 +59,10 @@ export const PollApp = () => {
         )}
 
         <p className="app-footnote">
-          Contract on {NETWORK}: <code>{CONTRACT_ADDRESS}</code>
+          Contract on {NETWORK}: <code>{contractAddress}</code>
+        </p>
+        <p className="app-footnote">
+          <Link to="/create">Create your own poll →</Link>
         </p>
       </main>
     </div>

@@ -364,6 +364,58 @@ button,
   word-break: break-all;
 }
 
+.app-footnote a {
+  color: var(--accent-2);
+  text-decoration: none;
+}
+
+.app-footnote a:hover {
+  text-decoration: underline;
+}
+
+.topnav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* ---------- create a poll ---------- */
+
+.create-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+}
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.create-form label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.create-form input {
+  font: inherit;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+}
+
+.create-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.create-form .btn-primary {
+  align-self: flex-start;
+}
+
 .poll-card {
   background: var(--card);
   border: 1px solid var(--border-soft);

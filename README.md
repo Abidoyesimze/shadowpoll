@@ -136,10 +136,10 @@ npm run dev --workspace=frontend
 
 ![ShadowPoll live demo on Vercel, showing the live poll question and real tally](docs/screenshots/live-demo.png)
 
-Live at **[shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)**. It has two independent halves:
+Live at **[shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)**. The landing page (`/`) is marketing copy; the actual product lives on separate routes:
 
-- **Live poll display** (`frontend/src/hooks/usePollState.ts`) — reads the deployed contract's public ledger state directly from the indexer, no wallet required.
-- **Lace-connected voting** — `frontend/src/lib/wallet-bridge.ts` bridges the injected [dapp-connector](https://www.npmjs.com/package/@midnight-ntwrk/dapp-connector-api) API (e.g. [Lace](https://www.lace.io/)) to the `WalletProvider`/`MidnightProvider` interfaces `@shadowpoll/api`'s `ShadowPollAPI.castVote()` expects - connect, get funds-aware state, call the `castVote` circuit, submit through the wallet, disconnect. Proving is delegated to the wallet itself by default (`getProvingProvider`, see `frontend/src/lib/providers.ts`), not a locally-run proof server, so this works for any visitor with a compatible wallet installed and no Docker setup. Set `VITE_USE_LOCAL_PROOF_SERVER=true` to instead prove against a proof server you run yourself.
+- **`/app` or `/app/:contractAddress`** — live poll display (`frontend/src/hooks/usePollState.ts`, reads the indexer directly, no wallet needed) plus Lace-connected voting. `frontend/src/lib/wallet-bridge.ts` bridges the injected [dapp-connector](https://www.npmjs.com/package/@midnight-ntwrk/dapp-connector-api) API (e.g. [Lace](https://www.lace.io/)) to the `WalletProvider`/`MidnightProvider` interfaces `@shadowpoll/api`'s `ShadowPollAPI.castVote()` expects - connect, get funds-aware state, call the `castVote` circuit, submit through the wallet, disconnect. Proving is delegated to the wallet itself by default (`getProvingProvider`, see `frontend/src/lib/providers.ts`), not a locally-run proof server, so this works for any visitor with a compatible wallet installed and no Docker setup. Set `VITE_USE_LOCAL_PROOF_SERVER=true` to instead prove against a proof server you run yourself.
+- **`/create`** — deploy a brand new poll from the browser (`frontend/src/pages/CreatePoll.tsx`), calling `ShadowPollAPI.deploy()` with the connected wallet, then redirecting to `/app/:contractAddress` for the poll just created. The creating wallet's identity becomes that poll's creator - the only one who'll ever see the `closePoll` control on it, without that role being visible to anyone else (see [Public state vs. private witness](#public-state-vs-private-witness)).
 
 ### Deploying the frontend
 

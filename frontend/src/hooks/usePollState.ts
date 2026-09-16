@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import { ledger } from '@shadowpoll/contract';
-import { INDEXER_HTTP_URL, INDEXER_WS_URL, CONTRACT_ADDRESS } from '../lib/env';
+import { INDEXER_HTTP_URL, INDEXER_WS_URL } from '../lib/env';
 
 export type PollState = {
   question: string;
@@ -19,12 +19,13 @@ export type PollStateStatus =
   | { status: 'ready'; poll: PollState }
   | { status: 'error'; message: string };
 
-export const usePollState = (): PollStateStatus => {
+export const usePollState = (contractAddress: string): PollStateStatus => {
   const [status, setStatus] = useState<PollStateStatus>({ status: 'loading' });
 
   useEffect(() => {
+    setStatus({ status: 'loading' });
     const publicDataProvider = indexerPublicDataProvider(INDEXER_HTTP_URL, INDEXER_WS_URL);
-    const subscription = publicDataProvider.contractStateObservable(CONTRACT_ADDRESS, { type: 'latest' }).subscribe({
+    const subscription = publicDataProvider.contractStateObservable(contractAddress, { type: 'latest' }).subscribe({
       next: (contractState) => {
         const ledgerState = ledger(contractState.data);
         setStatus({
@@ -40,7 +41,7 @@ export const usePollState = (): PollStateStatus => {
       error: (error) => setStatus({ status: 'error', message: error instanceof Error ? error.message : String(error) }),
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [contractAddress]);
 
   return status;
 };

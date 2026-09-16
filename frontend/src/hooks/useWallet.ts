@@ -1,8 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ShadowPollAPI } from '@shadowpoll/api';
-import { LaceWalletBridge } from '../lib/wallet-bridge';
-import { buildShadowPollProviders } from '../lib/providers';
-import { CONTRACT_ADDRESS } from '../lib/env';
+import { useLaceWallet } from './useLaceWallet';
 
 export type WalletConnectionState =
   | { status: 'disconnected' }
@@ -10,27 +8,36 @@ export type WalletConnectionState =
   | { status: 'connected'; address: string; api: ShadowPollAPI }
   | { status: 'error'; message: string };
 
-export const useWallet = () => {
+// Connects to the wallet, then joins the specific poll at contractAddress.
+export const useWallet = (contractAddress: string) => {
+  const { state: laceState, connect: connectLace, disconnect: disconnectLace } = useLaceWallet();
   const [state, setState] = useState<WalletConnectionState>({ status: 'disconnected' });
-  const apiRef = useRef<ShadowPollAPI | null>(null);
 
-  const connect = useCallback(async () => {
-    setState({ status: 'connecting' });
-    try {
-      const wallet = await LaceWalletBridge.connect();
-      const providers = await buildShadowPollProviders(wallet);
-      const api = await ShadowPollAPI.join(providers, CONTRACT_ADDRESS);
-      apiRef.current = api;
-      setState({ status: 'connected', address: wallet.unshieldedAddress, api });
-    } catch (error) {
-      setState({ status: 'error', message: error instanceof Error ? error.message : String(error) });
+  useEffect(() => {
+    let cancelled = false;
+    if (laceState.status === 'connecting') {
+      setState({ status: 'connecting' });
+    } else if (laceState.status === 'disconnected') {
+      setState({ status: 'disconnected' });
+    } else if (laceState.status === 'error') {
+      setState({ status: 'error', message: laceState.message });
+    } else if (laceState.status === 'connected') {
+      setState({ status: 'connecting' });
+      ShadowPollAPI.join(laceState.providers, contractAddress)
+        .then((api) => {
+          if (!cancelled) setState({ status: 'connected', address: laceState.address, api });
+        })
+        .catch((error) => {
+          if (!cancelled) setState({ status: 'error', message: error instanceof Error ? error.message : String(error) });
+        });
     }
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [laceState, contractAddress]);
 
-  const disconnect = useCallback(() => {
-    apiRef.current = null;
-    setState({ status: 'disconnected' });
-  }, []);
+  const connect = useCallback(() => connectLace(), [connectLace]);
+  const disconnect = useCallback(() => disconnectLace(), [disconnectLace]);
 
   return { state, connect, disconnect };
 };
