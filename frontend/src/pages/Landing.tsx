@@ -8,14 +8,9 @@ export const Landing = () => (
   <>
     <nav className="topnav">
       <span className="wordmark">ShadowPoll</span>
-      <div className="topnav-actions">
-        <Link className="btn-ghost topnav-live" to="/create">
-          Create a poll
-        </Link>
-        <Link className="btn-ghost topnav-live" to="/app">
-          Launch app
-        </Link>
-      </div>
+      <Link className="btn-ghost topnav-live" to="/app">
+        Launch app
+      </Link>
     </nav>
 
     <main>

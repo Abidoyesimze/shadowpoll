@@ -38,7 +38,12 @@ export const PollApp = () => {
         <Link className="wordmark" to="/">
           ShadowPoll
         </Link>
-        <ConnectButton state={walletState} onConnect={connect} onDisconnect={disconnect} />
+        <div className="topnav-actions">
+          <Link className="btn-ghost topnav-live" to="/create">
+            Create a poll
+          </Link>
+          <ConnectButton state={walletState} onConnect={connect} onDisconnect={disconnect} />
+        </div>
       </nav>
 
       <main className="app-main">
@@ -60,9 +65,6 @@ export const PollApp = () => {
 
         <p className="app-footnote">
           Contract on {NETWORK}: <code>{contractAddress}</code>
-        </p>
-        <p className="app-footnote">
-          <Link to="/create">Create your own poll →</Link>
         </p>
       </main>
     </div>

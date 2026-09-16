@@ -32,7 +32,12 @@ export const CreatePoll = () => {
         <Link className="wordmark" to="/">
           ShadowPoll
         </Link>
-        <ConnectButton state={walletState} onConnect={connect} onDisconnect={disconnect} />
+        <div className="topnav-actions">
+          <Link className="btn-ghost topnav-live" to="/app">
+            View a poll
+          </Link>
+          <ConnectButton state={walletState} onConnect={connect} onDisconnect={disconnect} />
+        </div>
       </nav>
 
       <main className="app-main">
