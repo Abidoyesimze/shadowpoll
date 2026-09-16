@@ -7,7 +7,7 @@ A private voting/polling contract for [Midnight](https://midnight.network), buil
 **Live demo:** [shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)
 **Contract (Preview):** [`2daaffd761b9695e4ddede415d83b7dade6b999ea0da825e60ba7c9c6b55d3a7`](https://indexer.preview.midnight.network/api/v4/graphql) — see [Level 2](#level-2--first-crescent) for why Preview, not Preprod
 **Demo video (Level 2):** [Watch on Loom](https://www.loom.com/share/0acbb755c90d44e886c8d400ccb9c9e4)
-**Demo video (Level 3):** _pending_ - to be recorded by following [`docs/demo-script-level3.md`](docs/demo-script-level3.md)
+**Demo video (Level 3):** [Watch on Loom](https://www.loom.com/share/aeaa6c73801546cca1d1fcdcf5a5779f)
 **Chosen idea:** Private Voting — anonymous ballots with publicly verifiable tallies (see [Level 3](#level-3--half-moon))
 
 ## Product idea
@@ -239,11 +239,15 @@ Anyone with access to the Preview indexer or a block explorer - not just other p
 
 The one deliberate exception is unavoidable and stated plainly: the *aggregate* tally is intentionally public, because a poll whose result nobody can see isn't a poll. Privacy here means *ballot* privacy, not *result* privacy.
 
+### Demo video
+
+**[Watch on Loom](https://www.loom.com/share/aeaa6c73801546cca1d1fcdcf5a5779f)** - recorded by following [`docs/demo-script-level3.md`](docs/demo-script-level3.md): live public state, wallet connect, a private circuit call (vote), the observable privacy guarantee, and the creator-only `closePoll` circuit call.
+
 ### Current limitations, stated plainly
 
 In the interest of "production-grade" meaning honest, not just polished:
 
-- **Voting through the live frontend with Lace is not yet confirmed reliably working end to end.** Wallet connect and the read-only live poll display are verified working; casting a vote via wallet-delegated proving has hit a silent failure (no error, no wallet approval prompt) during testing that isn't fully root-caused yet - see the open investigation in this repo's commit history around `wallet-bridge.ts` and `providers.ts`. The `castVote` circuit itself is verified correct and tested at the contract level (see Tests above), and casting a vote via the CLI's direct-deploy path (server-side wallet, not Lace) works reliably.
+- **Voting and closing a poll through the live frontend with Lace are confirmed working end to end** - see the Level 3 demo video above. Earlier in this project that path hit intermittent failures (silent hangs, opaque submission errors, and separately a Manifest V3 extension issue where Lace's background service worker being torn down mid-session breaks its "remote API channel" until the page is reloaded) - see the fixes in this repo's commit history around `wallet-bridge.ts` and `providers.ts` for what was actually wrong versus red herrings.
 - **Preprod is still blocked** by the faucet issue documented in [Level 2](#why-preview-not-preprod) - this contract runs on Preview.
 - **Full wallet sync on Preview has gotten dramatically slower over the life of this project** - minutes in Level 1, multiple hours by Level 3, for the same wallet. All three sync lanes (shielded, unshielded, dust) turned out to be genuinely required before building any spend, including a dust-only one - dropping the shielded-lane check as an optimization was tried and reverted after it produced a real chain-rejected transaction (`Custom error: 170` / `InvalidDustSpendProof`), not just a timeout. The best working theory: a spend proof has to reference the wallet's view of a state root spanning all three lanes together, and shielded-lane scanning cost (checking every shielded output ever emitted on the whole chain) grows with the testnet's cumulative activity over calendar time, for every wallet, not just reused ones. `cli/src/wallet-utils.ts` documents this in detail and budgets accordingly (hours, not minutes) for anyone redeploying.
 
