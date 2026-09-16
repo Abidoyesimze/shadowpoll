@@ -6,7 +6,7 @@ A private voting/polling contract for [Midnight](https://midnight.network), buil
 
 **Live demo:** [shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)
 **Contract (Preview):** [`2daaffd761b9695e4ddede415d83b7dade6b999ea0da825e60ba7c9c6b55d3a7`](https://indexer.preview.midnight.network/api/v4/graphql) — see [Level 2](#level-2--first-crescent) for why Preview, not Preprod
-**Demo video:** [Watch on Loom](https://www.loom.com/share/aeaa6c73801546cca1d1fcdcf5a5779f)
+**Demo video:** [Watch on Loom](https://www.loom.com/share/19ab6bd0682344a0a03ba9733d4bf37a)
 **Chosen idea:** Private Voting — anonymous ballots with publicly verifiable tallies (see [Level 3](#level-3--half-moon))
 
 ## Product idea
@@ -240,7 +240,7 @@ The one deliberate exception is unavoidable and stated plainly: the *aggregate* 
 
 ### Demo video
 
-**[Watch on Loom](https://www.loom.com/share/aeaa6c73801546cca1d1fcdcf5a5779f)** - recorded by following [`docs/demo-script-level3.md`](docs/demo-script-level3.md): live public state, wallet connect, a private circuit call (vote), the observable privacy guarantee, and the creator-only `closePoll` circuit call.
+**[Watch on Loom](https://www.loom.com/share/19ab6bd0682344a0a03ba9733d4bf37a)** - recorded by following [`docs/demo-script-level3.md`](docs/demo-script-level3.md): live public state, wallet connect, a private circuit call (vote), the observable privacy guarantee, and the creator-only `closePoll` circuit call.
 
 ### Current limitations, stated plainly
 
