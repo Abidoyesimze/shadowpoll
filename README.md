@@ -182,7 +182,7 @@ A polished, production-grade dApp: tests, CI/CD, and a chosen problem from the M
 
 ### Chosen idea: Private Voting
 
-ShadowPoll already *is* "Private Voting — anonymous ballots with publicly verifiable tallies," the first idea on the provided list - Levels 1 and 2 built exactly this, so Level 3 is about hardening it (tests, CI, honest documentation of what's real vs. in-progress) rather than starting a new project. See [Product idea](#product-idea) above for the full pitch, and [`docs/product-proposal.md`](docs/product-proposal.md) for the standalone proposal write-up.
+ShadowPoll already *is* "Private Voting — anonymous ballots with publicly verifiable tallies," the first idea on the provided list - Levels 1 and 2 built exactly this, so Level 3 is about hardening it (tests, CI, honest documentation of what's real vs. in-progress) rather than starting a new project. See [Product idea](#product-idea) above for the full pitch. The proposal itself is submitted separately via the challenge dashboard, not tracked in this repo.
 
 ### Deployed contract
 
