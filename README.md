@@ -6,8 +6,7 @@ A private voting/polling contract for [Midnight](https://midnight.network), buil
 
 **Live demo:** [shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)
 **Contract (Preview):** [`2daaffd761b9695e4ddede415d83b7dade6b999ea0da825e60ba7c9c6b55d3a7`](https://indexer.preview.midnight.network/api/v4/graphql) — see [Level 2](#level-2--first-crescent) for why Preview, not Preprod
-**Demo video (Level 2):** [Watch on Loom](https://www.loom.com/share/0acbb755c90d44e886c8d400ccb9c9e4)
-**Demo video (Level 3):** [Watch on Loom](https://www.loom.com/share/aeaa6c73801546cca1d1fcdcf5a5779f)
+**Demo video:** [Watch on Loom](https://www.loom.com/share/aeaa6c73801546cca1d1fcdcf5a5779f)
 **Chosen idea:** Private Voting — anonymous ballots with publicly verifiable tallies (see [Level 3](#level-3--half-moon))
 
 ## Product idea
