@@ -5,7 +5,8 @@
 A private voting/polling contract for [Midnight](https://midnight.network), built for the **Moonlight Challenges** — [Level 1: New Moon](#level-1--new-moon), [Level 2: First Crescent](#level-2--first-crescent), and [Level 3: Half Moon](#level-3--half-moon).
 
 **Live demo:** [shadowpoll-frontend.vercel.app](https://shadowpoll-frontend.vercel.app)
-**Contract (Preview):** [`2daaffd761b9695e4ddede415d83b7dade6b999ea0da825e60ba7c9c6b55d3a7`](https://indexer.preview.midnight.network/api/v4/graphql) — see [Level 2](#level-2--first-crescent) for why Preview, not Preprod
+**Contract (network: Preview, *not* Preprod — Preprod is blocked by a faucet bug, see [why](#why-preview-not-preprod)):** [`2daaffd761b9695e4ddede415d83b7dade6b999ea0da825e60ba7c9c6b55d3a7`](https://indexer.preview.midnight.network/api/v4/graphql)
+**Proposal:** [PROPOSAL.md](PROPOSAL.md)
 **Demo video:** [Watch on Loom](https://www.loom.com/share/19ab6bd0682344a0a03ba9733d4bf37a)
 **Chosen idea:** Private Voting — anonymous ballots with publicly verifiable tallies (see [Level 3](#level-3--half-moon))
 
@@ -181,13 +182,13 @@ A polished, production-grade dApp: tests, CI/CD, and a chosen problem from the M
 
 ### Chosen idea: Private Voting
 
-ShadowPoll already *is* "Private Voting — anonymous ballots with publicly verifiable tallies," the first idea on the provided list - Levels 1 and 2 built exactly this, so Level 3 is about hardening it (tests, CI, honest documentation of what's real vs. in-progress) rather than starting a new project. See [Product idea](#product-idea) above for the full pitch. The proposal itself is submitted separately via the challenge dashboard, not tracked in this repo.
+ShadowPoll already *is* "Private Voting — anonymous ballots with publicly verifiable tallies," the first idea on the provided list - Levels 1 and 2 built exactly this, so Level 3 is about hardening it (tests, CI, honest documentation of what's real vs. in-progress) rather than starting a new project. See [Product idea](#product-idea) above for the full pitch, and [`PROPOSAL.md`](PROPOSAL.md) for the standalone proposal write-up (product, why Midnight, data model, and Mainnet-by-Level-6 feasibility).
 
 ### Deployed contract
 
 Level 3 adds `closePoll` to the contract (see [Public state vs. private witness](#public-state-vs-private-witness) above), which changes the ledger's on-chain schema, so it needed a fresh deploy rather than reusing the Level 1/2 address:
 
-**Deployed contract (Preview):** [`2daaffd761b9695e4ddede415d83b7dade6b999ea0da825e60ba7c9c6b55d3a7`](https://indexer.preview.midnight.network/api/v4/graphql) — independently queryable via the Preview indexer's `contract(address: "...")` GraphQL query. This is the address the live demo and frontend now point at.
+**Deployed contract (network: Preview, not Preprod — see [why](#why-preview-not-preprod)):** [`2daaffd761b9695e4ddede415d83b7dade6b999ea0da825e60ba7c9c6b55d3a7`](https://indexer.preview.midnight.network/api/v4/graphql) — independently queryable via the Preview indexer's `contract(address: "...")` GraphQL query. This is the address the live demo and frontend now point at. **Preprod deploy is still blocked** on the faucet client bug below; swapping networks once it's fixed is a one-line env var change.
 
 ### Tests
 
